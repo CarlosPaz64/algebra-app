@@ -1,44 +1,40 @@
 import React from "react";
 import { Platform, View } from "react-native";
 
-let WebLatex: React.FC<{ expression: string }> | null = null;
-
-if (Platform.OS === "web") {
-  const { BlockMath } = require("react-katex");
-  WebLatex = ({ expression }) => (
-    <View style={{ padding: 12 }}>
-      <BlockMath math={expression} />
-    </View>
-  );
-}
-
-const NativeLatex =
-  Platform.OS !== "web" ? require("react-native-katex").default : null;
-
 export const MathRenderer = ({ expression }: { expression: string }) => {
-  if (Platform.OS === "web" && WebLatex) {
-    return <WebLatex expression={expression} />;
+  if (Platform.OS === "web") {
+    const { BlockMath } = require("react-katex");
+    return (
+      <View style={{ padding: 12 }}>
+        <BlockMath math={expression} />
+      </View>
+    );
   }
 
-if (NativeLatex) {
+  const NativeLatex = require("react-native-katex").default;
+
   return (
     <View
       style={{
-        marginVertical: 16,
+        padding: 12,
         backgroundColor: "white",
         borderRadius: 10,
         borderWidth: 1,
         borderColor: "#ccc",
-        height: 220,
+        marginBottom: 16,
       }}
     >
-      <View style={{ transform: [{ scale: 2 }] }}>
-        <NativeLatex expression={expression} />
-      </View>
+      <NativeLatex
+        expression={expression}
+        style={{
+          width: "100%",
+          minHeight: 120,
+          transform: [{ scale: 4 }]
+        }}
+        contentStyle={{
+          fontSize: 24,
+        }}
+      />
     </View>
   );
-}
-
-
-  return null;
 };
