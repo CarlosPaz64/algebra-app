@@ -1,33 +1,58 @@
-import React from "react";
-import { ScrollView, Text, View } from "react-native";
-import { MathRenderer } from "./MathRender";
-
-const examples: { label: string; latex: string }[] = [
-  { label: "LiteralNode", latex: "42" },
-  { label: "VariableNode", latex: "y" },
-  { label: "OperatorNode (+)", latex: "a + b + c" },
-  { label: "OperatorNode (-)", latex: "7 - x" },
-  { label: "OperatorNode (*)", latex: "4 \\cdot (x + 1)" },
-  { label: "OperatorNode (/)", latex: "\\frac{2x + 1}{5}" },
-  { label: "OperatorNode (=)", latex: "x^2 + 3x + 2 = 0" },
-  { label: "FunctionNode (sqrt)", latex: "\\sqrt{(x + 1)^2}" },
-  { label: "FunctionNode (nthRoot)", latex: "\\sqrt[4]{81}" },
-  { label: "FunctionNode (log + sin)", latex: "\\log{100} + \\sin{\\frac{\\pi}{2}}" },
-  { label: "FunctionNode (abs)", latex: "\\left| \\frac{-3x}{2} \\right|" },
-  { label: "GroupingNode (nested)", latex: "\\left( \\frac{2x + 1}{\\sqrt{y^2 + 1}} \\right)^3" },
-  { label: "Complex Mix", latex: "\\frac{\\left(2x + 3\\right)^2}{\\sqrt{4y}} + \\log{10}" },
-];
-
+import React, { useEffect } from "react";
+import { Text, ScrollView, View } from "react-native";
+import { DistributiveRule } from "./src/features/core/algebra/rules/DistributiveRule";
+import { TranspositionRule } from "./src/features/core/algebra/rules/TranspositionRule";
+import { ASTToLatex } from "./src/features/core/algebra/latex/ASTToLatex";
+import { ASTNode } from "./src/features/core/types/AST";
 
 export const DebugASTRenderer = () => {
+  useEffect(() => {
+    console.log("Iniciando pruebas de reglas...");
+
+    const distributiveAST: ASTNode = {
+      type: "Operator",
+      operator: "*",
+      left: { type: "Literal", value: 2 },
+      right: {
+        type: "Operator",
+        operator: "+",
+        left: { type: "Variable", name: "x" },
+        right: { type: "Literal", value: 3 },
+      },
+    };
+
+    const distRule = new DistributiveRule();
+    const distResult = distRule.apply(distributiveAST);
+
+    console.log("Distributiva aplicada:");
+    console.log("AST:", JSON.stringify(distResult, null, 2));
+    console.log("LaTeX:", distResult ? ASTToLatex(distResult) : "No se aplicó");
+
+    const transpositionAST: ASTNode = {
+      type: "Operator",
+      operator: "=",
+      left: {
+        type: "Operator",
+        operator: "+",
+        left: { type: "Variable", name: "x" },
+        right: { type: "Literal", value: 2 },
+      },
+      right: { type: "Literal", value: 5 },
+    };
+
+    const transpRule = new TranspositionRule();
+    const transpResult = transpRule.apply(transpositionAST);
+
+    console.log("Transposición aplicada:");
+    console.log("AST:", JSON.stringify(transpResult, null, 2));
+    console.log("LaTeX:", transpResult ? ASTToLatex(transpResult) : "No se aplicó");
+
+  }, []);
+
   return (
     <ScrollView contentContainerStyle={{ padding: 16 }}>
-      {examples.map(({ label, latex }, index) => (
-        <View key={index} style={{ marginBottom: 32}}>
-          <Text style={{ fontWeight: "bold", marginBottom: 8, fontSize: 16 }}>{label}</Text>
-          <MathRenderer expression={latex} />
-        </View>
-      ))}
+      <Text style={{ fontSize: 18, fontWeight: "bold" }}>Prueba de las reglas</Text>
+      <Text>Revisa la consola para ver el resultado de aplicar las reglas.</Text>
     </ScrollView>
   );
 };
