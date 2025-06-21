@@ -1,149 +1,67 @@
-import React, { useEffect } from "react";
-import { Text, ScrollView, View } from "react-native";
-import { DistributiveRule } from "./src/features/core/algebra/rules/DistributiveRule";
-import { TranspositionRule } from "./src/features/core/algebra/rules/TranspositionRule";
-import { ASTToLatex } from "./src/features/core/algebra/latex/ASTToLatex";
-import { ASTNode } from "./src/features/core/types/AST";
-import { SimplifyLikeTermsRule } from "./src/features/core/algebra/rules/SimplifyLikeTermsRule";
-import { FractionReductionRule } from "./src/features/core/algebra/rules/FractionReductionRule";
-import { RemoveZeroRule } from "./src/features/core/algebra/rules/RemoveZeroRule";
-import { IdentityRule } from "./src/features/core/algebra/rules/IdentityRule";
-import { PowerToProductRule } from "./src/features/core/algebra/rules/PowerToProductRule";
+import React, { useEffect, useState } from "react";
+import { ScrollView, Text, View } from "react-native";
+import { parse } from "./src/features/core/algebra/parser";
+import { RuleEngine } from "./src/features/core/algebra/steps/RuleEngine";
+import { allRules } from "./src/features/core/algebra/rules/AllMyRules";
+import { RuleStep } from "./src/features/core/types/RuleStep";
+import { MathRenderer } from "./MathRender";
 
 export const DebugASTRenderer = () => {
+  const [steps, setSteps] = useState<RuleStep[]>([]);
+  const input = "2(x + 3)^2";
+
   useEffect(() => {
-    console.log("Iniciando pruebas de reglas...");
+    let mounted = true; // 👈 Protección contra llamadas después del desmontaje
 
-    /* PRUEBA DEL MÓDULO PARA LA REGLA DISTRIBUTIVA */
-    const distributiveAST: ASTNode = {
-      type: "Operator",
-      operator: "*",
-      left: { type: "Literal", value: 2 },
-      right: {
-        type: "Operator",
-        operator: "+",
-        left: { type: "Variable", name: "x" },
-        right: { type: "Literal", value: 3 },
-      },
-    };
+    try {
+      const ast = parse(input);
+      console.log("📌 AST inicial:", JSON.stringify(ast, null, 2));
 
-    const distRule = new DistributiveRule();
-    const distResult = distRule.apply(distributiveAST);
+      const engine = new RuleEngine(allRules);
+      const generatedSteps = engine.applyAll(ast);
 
-    console.log("Distributiva aplicada:");
-    console.log("AST:", JSON.stringify(distResult, null, 2));
-    console.log("LaTeX:", distResult ? ASTToLatex(distResult) : "No se aplicó");
-
-    /* PRUEBA DEL MÓDULO PARA LA REGLA DE TRANSPOSICIÓN */
-    const transpositionAST: ASTNode = {
-      type: "Operator",
-      operator: "=",
-      left: {
-        type: "Operator",
-        operator: "+",
-        left: { type: "Variable", name: "x" },
-        right: { type: "Literal", value: 2 },
-      },
-      right: { type: "Literal", value: 5 },
-    };
-
-    const transpRule = new TranspositionRule();
-    const transpResult = transpRule.apply(transpositionAST);
-
-    console.log("Transposición aplicada:");
-    console.log("AST:", JSON.stringify(transpResult, null, 2));
-    console.log("LaTeX:", transpResult ? ASTToLatex(transpResult) : "No se aplicó");
-
-    /* PRUEBA DEL MÓDULO PARA LA REGLA DE SIMPLIFICACIÓN */
-    const simplifyAST: ASTNode = {
-      type: "Operator",
-      operator: "+",
-      left: {
-        type: "Operator",
-        operator: "*",
-        left: { type: "Literal", value: 2 },
-        right: { type: "Variable", name: "x" }
-      },
-      right: {
-        type: "Operator",
-        operator: "*",
-        left: { type: "Literal", value: 3 },
-        right: { type: "Variable", name: "x" }
+      if (mounted) {
+        setSteps(generatedSteps);
       }
+
+      if (generatedSteps.length === 0) {
+        console.warn("⚠️ No se aplicaron reglas. Verifica que allRules tenga las reglas adecuadas.");
+      } else {
+        console.log("📚 Pasos:");
+        generatedSteps.forEach((step) => {
+          console.log(`Paso ${step.stepNumber}: ${step.description}`);
+          console.log(step.latex);
+        });
+      }
+    } catch (error) {
+      console.error("❌ Error al procesar la expresión:", error);
+    }
+
+    return () => {
+      mounted = false; // 🧹 Limpieza para evitar estado después del desmontaje
     };
-
-    const simplifyRule = new SimplifyLikeTermsRule();
-    const simplifyResult = simplifyRule.apply(simplifyAST);
-
-    console.log("Simplificación aplicada:");
-    console.log("AST:", JSON.stringify(simplifyResult, null, 2));
-    console.log("LaTeX:", simplifyResult ? ASTToLatex(simplifyResult) : "No se aplicó");
-
-    const fractionAST: ASTNode = {
-      type: "Operator",
-      operator: "/",
-      left: { type: "Literal", value: 4 },
-      right: { type: "Literal", value: 8 }
-    };
-
-    const fractionRule = new FractionReductionRule();
-    const fractionResult = fractionRule.apply(fractionAST);
-
-    console.log("Reducción de fracción aplicada:");
-    console.log("AST:", JSON.stringify(fractionResult, null, 2));
-    console.log("LaTeX:", fractionResult ? ASTToLatex(fractionResult) : "No se aplicó");
-
-    /* PRUEBA DE ELIMINACIÓN DE CEROS */
-    const zeroAST: ASTNode = {
-      type: "Operator",
-      operator: "+",
-      left: { type: "Variable", name: "x" },
-      right: { type: "Literal", value: 0 }
-    };
-
-    const zeroRule = new RemoveZeroRule();
-    const zeroResult = zeroRule.apply(zeroAST);
-
-    console.log("Eliminación de ceros aplicada:");
-    console.log("AST:", JSON.stringify(zeroResult, null, 2));
-    console.log("LaTeX:", zeroResult ? ASTToLatex(zeroResult) : "No se aplicó");
-
-    /* PRUEBA DE IDENTIDAD */
-    const identityAST: ASTNode = {
-      type: "Operator",
-      operator: "*",
-      left: { type: "Literal", value: 1 },
-      right: { type: "Variable", name: "x" }
-    };
-
-    const identityRule = new IdentityRule();
-    const identityResult = identityRule.apply(identityAST);
-
-    console.log("Identidad aplicada:");
-    console.log("AST:", JSON.stringify(identityResult, null, 2));
-    console.log("LaTeX:", identityResult ? ASTToLatex(identityResult) : "No se aplicó");
-
-    /* PRUEBA DEL MÓDULO DE POTENCIACIÓN */
-    const powerAST: ASTNode = {
-      type: "Operator",
-      operator: "^",
-      left: { type: "Variable", name: "x" },
-      right: { type: "Literal", value: 3 }
-    };
-
-    const powerRule = new PowerToProductRule();
-    const powerResult = powerRule.apply(powerAST);
-
-    console.log("Potencia a producto aplicada:");
-    console.log("AST:", JSON.stringify(powerResult, null, 2));
-    console.log("LaTeX:", powerResult ? ASTToLatex(powerResult) : "No se aplicó");
-
   }, []);
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16 }}>
-      <Text style={{ fontSize: 18, fontWeight: "bold" }}>Prueba de las reglas</Text>
-      <Text>Revisa la consola para ver el resultado de aplicar las reglas.</Text>
+      <Text style={{ fontSize: 22, fontWeight: "bold", marginBottom: 12 }}>
+        Resolución paso a paso de: {input}
+      </Text>
+
+      {steps.length === 0 ? (
+        <Text style={{ color: "red" }}>
+          No se aplicaron reglas. Asegúrate de incluir todas en <Text style={{ fontWeight: "bold" }}>allRules</Text> (ej. <Text style={{ fontWeight: "bold" }}>ExpandPowerOfSumRule</Text>)
+        </Text>
+      ) : (
+        steps.map((step) => (
+          <View key={step.stepNumber} style={{ marginBottom: 20 }}>
+            <Text style={{ fontWeight: "bold", marginBottom: 4 }}>
+              Paso {step.stepNumber}: {step.description}
+            </Text>
+            <MathRenderer expression={step.latex} />
+          </View>
+        ))
+      )}
     </ScrollView>
   );
 };

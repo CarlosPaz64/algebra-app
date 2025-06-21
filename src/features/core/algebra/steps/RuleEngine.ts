@@ -2,6 +2,7 @@ import { ASTNode } from "../../types/AST";
 import { Rule } from "./Rule";
 import { RuleStep } from "../../types/RuleStep";
 import { ASTToLatex } from "../latex/ASTToLatex";
+import { recursivelyApplyRule } from "../rules/RecursivelyApplyRule";
 
 /**
  * El motor de reglas aplica transformaciones algebraicas al AST,
@@ -17,15 +18,23 @@ export class RuleEngine {
    * @param ast Árbol de sintaxis original
    * @returns Array de pasos aplicados (RuleStep[])
    */
-  applyAll(ast: ASTNode): RuleStep[] {
-    const steps: RuleStep[] = [];
-    let currentAST = ast;
-    let step = 1;
+applyAll(ast: ASTNode): RuleStep[] {
+  const steps: RuleStep[] = [];
+  let currentAST = ast;
+  let step = 1;
+
+  while (true) {
+    let transformed: ASTNode | null = null;
 
     for (const rule of this.rules) {
-      const transformed = rule.apply(currentAST);
+      console.log(`🔍 Probando regla: ${rule.name}`);
 
-      if (transformed) {
+      transformed = recursivelyApplyRule(rule, currentAST);
+
+      if (transformed && JSON.stringify(transformed) !== JSON.stringify(currentAST)) {
+        console.log(`✅ Regla aplicada: ${rule.name}`);
+        console.log("📤 AST transformado:", JSON.stringify(transformed, null, 2));
+
         const stepData: RuleStep = {
           stepNumber: step++,
           description: rule.description(currentAST),
@@ -35,9 +44,18 @@ export class RuleEngine {
 
         steps.push(stepData);
         currentAST = transformed;
+        break; // 🧠 Muy importante: reinicia desde la primera regla
+      } else {
+        console.log(`⛔ No aplica: ${rule.name}`);
       }
     }
 
-    return steps;
+    if (!transformed) {
+      break; // 🚪 Salir cuando ninguna regla aplica más
+    }
   }
+
+  return steps;
+}
+
 }

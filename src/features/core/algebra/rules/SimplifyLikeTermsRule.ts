@@ -1,11 +1,35 @@
 import { Rule } from "../steps/Rule";
 import { ASTNode } from "../../types/AST";
+import { deepEquals } from "./DeepEquals";
 
 export class SimplifyLikeTermsRule implements Rule {
   name = "Simplificación de términos semejantes";
 
   apply(ast: ASTNode): ASTNode | null {
-    // Detecta patrón: (coef1 * x) + (coef2 * x)
+    const transformed = this.simplify(ast);
+
+    if (transformed && !deepEquals(transformed, ast)) {
+      return transformed;
+    }
+
+    // Recorrer hijos si no se transformó nada
+    if (ast.type === "Operator") {
+      const left = this.apply(ast.left);
+      const right = this.apply(ast.right);
+
+      if (left || right) {
+        return {
+          ...ast,
+          left: left ?? ast.left,
+          right: right ?? ast.right,
+        };
+      }
+    }
+
+    return null;
+  }
+
+  private simplify(ast: ASTNode): ASTNode | null {
     if (
       ast.type === "Operator" &&
       ast.operator === "+" &&
@@ -23,14 +47,12 @@ export class SimplifyLikeTermsRule implements Rule {
       const coef2 = ast.right.left.value;
       const variableName = ast.left.right.name;
 
-      const simplified: ASTNode = {
+      return {
         type: "Operator",
         operator: "*",
         left: { type: "Literal", value: coef1 + coef2 },
         right: { type: "Variable", name: variableName }
       };
-
-      return simplified;
     }
 
     return null;

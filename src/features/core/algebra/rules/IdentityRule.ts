@@ -1,23 +1,43 @@
 import { Rule } from "../steps/Rule";
-import { ASTNode } from "../../types/AST";
+import { ASTNode, OperatorNode } from "../../types/AST";
+import { deepEquals } from "./DeepEquals";
 
 export class IdentityRule implements Rule {
   name = "Identidad algebraica";
 
-  apply(ast: ASTNode): ASTNode | null {
-    if (ast.type !== "Operator") return null;
+  apply(node: ASTNode): ASTNode | null {
+    const simplified = this.removeIdentities(node);
 
-    // x * 1 o 1 * x → x
-    if (
-      ast.operator === "*" &&
-      (isOne(ast.left) || isOne(ast.right))
-    ) {
-      return isOne(ast.left) ? ast.right : ast.left;
+    if (simplified && !deepEquals(simplified, node)) {
+      return simplified;
     }
 
-    // x / 1 → x
-    if (ast.operator === "/" && isOne(ast.right)) {
-      return ast.left;
+    // Aplicar recursivamente en hijos si no cambió
+    if (node.type === "Operator") {
+      const left = this.apply(node.left);
+      const right = this.apply(node.right);
+
+      if (left || right) {
+        return {
+          ...node,
+          left: left ?? node.left,
+          right: right ?? node.right,
+        } as OperatorNode;
+      }
+    }
+
+    return null;
+  }
+
+  private removeIdentities(node: ASTNode): ASTNode | null {
+    if (node.type !== "Operator") return null;
+
+    if (node.operator === "*" && (isOne(node.left) || isOne(node.right))) {
+      return isOne(node.left) ? node.right : node.left;
+    }
+
+    if (node.operator === "/" && isOne(node.right)) {
+      return node.left;
     }
 
     return null;

@@ -1,5 +1,6 @@
 import { Rule } from "../steps/Rule";
-import { ASTNode } from "../../types/AST";
+import { ASTNode, OperatorNode } from "../../types/AST";
+import { deepEquals } from "./DeepEquals";
 
 function gcd(a: number, b: number): number {
   return b === 0 ? a : gcd(b, a % b);
@@ -8,15 +9,39 @@ function gcd(a: number, b: number): number {
 export class FractionReductionRule implements Rule {
   name = "Reducción de fracciones";
 
-  apply(ast: ASTNode): ASTNode | null {
+  apply(node: ASTNode): ASTNode | null {
+    const simplified = this.reduce(node);
+
+    if (simplified && !deepEquals(simplified, node)) {
+      return simplified;
+    }
+
+    // Recorre recursivamente si no hubo cambio directo
+    if (node.type === "Operator") {
+      const left = this.apply(node.left);
+      const right = this.apply(node.right);
+
+      if (left || right) {
+        return {
+          ...node,
+          left: left ?? node.left,
+          right: right ?? node.right,
+        } as OperatorNode;
+      }
+    }
+
+    return null;
+  }
+
+  private reduce(node: ASTNode): ASTNode | null {
     if (
-      ast.type === "Operator" &&
-      ast.operator === "/" &&
-      ast.left.type === "Literal" &&
-      ast.right.type === "Literal"
+      node.type === "Operator" &&
+      node.operator === "/" &&
+      node.left.type === "Literal" &&
+      node.right.type === "Literal"
     ) {
-      const a = ast.left.value;
-      const b = ast.right.value;
+      const a = node.left.value;
+      const b = node.right.value;
 
       const divisor = gcd(a, b);
       if (divisor === 1) return null;

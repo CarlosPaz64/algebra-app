@@ -1,22 +1,47 @@
 import { Rule } from "../steps/Rule";
-import { ASTNode } from "../../types/AST";
+import { ASTNode, OperatorNode } from "../../types/AST";
+import { deepEquals } from "./DeepEquals";
 
 export class TranspositionRule implements Rule {
   name = "Transposición";
 
-  apply(ast: ASTNode): ASTNode | null {
-    if (
-      ast.type === "Operator" &&
-      ast.operator === "=" &&
-      ast.left.type === "Operator" &&
-      ast.left.operator === "+"
-    ) {
-      const a = ast.left.left;
-      const b = ast.left.right;
-      const c = ast.right;
+  apply(node: ASTNode): ASTNode | null {
+    const transformed = this.transpose(node);
 
-      // x + 2 = 5 → x = 5 - 2
-      const transposed: ASTNode = {
+    // Si se aplicó correctamente y es diferente
+    if (transformed && !deepEquals(transformed, node)) {
+      return transformed;
+    }
+
+    // Recorre hijos solo si no se transformó el nodo actual
+    if (node.type === "Operator") {
+      const newLeft = this.apply(node.left);
+      const newRight = this.apply(node.right);
+
+      if (newLeft || newRight) {
+        return {
+          ...node,
+          left: newLeft ?? node.left,
+          right: newRight ?? node.right,
+        };
+      }
+    }
+
+    return null;
+  }
+
+  private transpose(node: ASTNode): ASTNode | null {
+    if (
+      node.type === "Operator" &&
+      node.operator === "=" &&
+      node.left.type === "Operator" &&
+      node.left.operator === "+"
+    ) {
+      const a = node.left.left;
+      const b = node.left.right;
+      const c = node.right;
+
+      return {
         type: "Operator",
         operator: "=",
         left: a,
@@ -27,8 +52,6 @@ export class TranspositionRule implements Rule {
           right: b,
         },
       };
-
-      return transposed;
     }
 
     return null;

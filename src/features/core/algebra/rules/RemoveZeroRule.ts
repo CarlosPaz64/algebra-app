@@ -1,37 +1,49 @@
 import { Rule } from "../steps/Rule";
-import { ASTNode } from "../../types/AST";
+import { ASTNode, OperatorNode } from "../../types/AST";
+import { deepEquals } from "./DeepEquals";
 
 export class RemoveZeroRule implements Rule {
   name = "Eliminación de ceros";
 
-  apply(ast: ASTNode): ASTNode | null {
-    if (
-      ast.type === "Operator" &&
-      ast.left.type === "Literal" &&
-      ast.right.type === "Literal"
-    ) {
-      return null;
+  apply(node: ASTNode): ASTNode | null {
+    const simplified = this.removeZeros(node);
+
+    if (simplified && !deepEquals(simplified, node)) {
+      return simplified;
     }
 
-    // x + 0 o 0 + x → x
-    if (
-      ast.type === "Operator" &&
-      (ast.operator === "+" || ast.operator === "-") &&
-      (isZero(ast.right) || isZero(ast.left))
-    ) {
-      return isZero(ast.right) ? ast.left : ast.right;
+    // Recorre hijos manualmente solo si no cambió
+    if (node.type === "Operator") {
+      const left = this.apply(node.left);
+      const right = this.apply(node.right);
+
+      if (left || right) {
+        return {
+          ...node,
+          left: left ?? node.left,
+          right: right ?? node.right,
+        } as OperatorNode;
+      }
     }
 
-    // x * 0 o 0 * x → 0
+    return null;
+  }
+
+  private removeZeros(node: ASTNode): ASTNode | null {
     if (
-      ast.type === "Operator" &&
-      ast.operator === "*" &&
-      (isZero(ast.left) || isZero(ast.right))
+      node.type === "Operator" &&
+      (node.operator === "+" || node.operator === "-") &&
+      (isZero(node.right) || isZero(node.left))
     ) {
-      return {
-        type: "Literal",
-        value: 0
-      };
+      return isZero(node.right) ? node.left : node.right;
+    }
+
+    if (
+      node.type === "Operator" &&
+      node.operator === "*" &&
+      (isZero(node.left) || isZero(node.right))
+    ) {
+      return { type: "Literal", value: 0 };
     }
 
     return null;
