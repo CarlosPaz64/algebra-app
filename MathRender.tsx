@@ -1,6 +1,5 @@
 import React from "react";
-import { Platform, View } from "react-native";
-import MathView from "react-native-math-view";
+import { View, Platform } from "react-native";
 
 export const MathRenderer = ({ expression }: { expression: string }) => {
   if (Platform.OS === "web") {
@@ -11,6 +10,9 @@ export const MathRenderer = ({ expression }: { expression: string }) => {
       </View>
     );
   }
+
+  // Android / iOS
+  const MathView = require("react-native-math-view").default;
 
   return (
     <View
@@ -25,11 +27,7 @@ export const MathRenderer = ({ expression }: { expression: string }) => {
     >
       <MathView
         math={expression}
-        resizeMode="contain"
-        style={{
-          width: "100%",
-          minHeight: 50,
-        }}
+        style={{ width: "100%", minHeight: 120 }}
       />
     </View>
   );
