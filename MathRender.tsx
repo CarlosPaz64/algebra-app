@@ -1,5 +1,6 @@
 import React from "react";
 import { Platform, View } from "react-native";
+import MathView from "react-native-math-view";
 
 export const MathRenderer = ({ expression }: { expression: string }) => {
   if (Platform.OS === "web") {
@@ -10,8 +11,6 @@ export const MathRenderer = ({ expression }: { expression: string }) => {
       </View>
     );
   }
-
-  const NativeLatex = require("react-native-katex").default;
 
   return (
     <View
@@ -24,15 +23,12 @@ export const MathRenderer = ({ expression }: { expression: string }) => {
         marginBottom: 16,
       }}
     >
-      <NativeLatex
-        expression={expression}
+      <MathView
+        math={expression}
+        resizeMode="contain"
         style={{
           width: "100%",
-          minHeight: 120,
-          transform: [{ scale: 4 }]
-        }}
-        contentStyle={{
-          fontSize: 24,
+          minHeight: 50,
         }}
       />
     </View>
