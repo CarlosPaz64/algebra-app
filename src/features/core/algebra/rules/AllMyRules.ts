@@ -18,6 +18,8 @@ import { FlattenMultiplicationRule } from "./FlattenMultiplicationRule";
 import { FlattenAdditionRule } from "./FlattenAdditionRule";
 import { PrettyPolynomialRule } from "./PrettyPolynomialRule";
 import { PolynomialBeautifyRule } from "./PolynomialBeautifyRule";
+import { PowerSimplifyRule } from "./PowerSimplifyRule";
+import { CombineLikeExponentsRule } from "./CombineLikeExponentsRule";
 
 export const allRules: Rule[] = [
   // 🔹 1. Limpiar agrupaciones y simplificar estructura
@@ -38,6 +40,8 @@ export const allRules: Rule[] = [
 
     new FlattenAdditionRule(),
   new PrettyPolynomialRule(),
+  new PowerSimplifyRule(),
+  // new CombineLikeExponentsRule(),
   new PolynomialBeautifyRule(),
 
   // 🔹 6. Distribuciones adicionales y signos negativos
