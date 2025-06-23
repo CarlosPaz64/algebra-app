@@ -3,59 +3,63 @@ import { Rule } from "./Rule";
 import { RuleStep } from "../../types/RuleStep";
 import { ASTToLatex } from "../latex/ASTToLatex";
 import { recursivelyApplyRule } from "../rules/RecursivelyApplyRule";
+import { deepEquals } from "../rules/DeepEquals"; // ✅ Importante para evitar ciclos
 
 /**
  * El motor de reglas aplica transformaciones algebraicas al AST,
  * una por una, y registra cada paso como una entrada en el historial.
  */
 export class RuleEngine {
+  private latestAST: ASTNode | null = null; // 🆕 Propiedad para acceder luego
+
   constructor(private rules: Rule[]) {}
 
-  /**
-   * Aplica todas las reglas disponibles al AST inicial,
-   * registrando cada transformación como un paso.
-   *
-   * @param ast Árbol de sintaxis original
-   * @returns Array de pasos aplicados (RuleStep[])
-   */
-applyAll(ast: ASTNode): RuleStep[] {
-  const steps: RuleStep[] = [];
-  let currentAST = ast;
-  let step = 1;
+  applyAll(ast: ASTNode): RuleStep[] {
+    const steps: RuleStep[] = [];
+    let currentAST = ast;
+    this.latestAST = currentAST; // 🔄 Inicializamos latestAST
+    let step = 1;
 
-  while (true) {
-    let transformed: ASTNode | null = null;
+    while (true) {
+      let transformed: ASTNode | null = null;
 
-    for (const rule of this.rules) {
-      console.log(`🔍 Probando regla: ${rule.name}`);
+      for (const rule of this.rules) {
+        console.log(`🔍 Probando regla: ${rule.name}`);
 
-      transformed = recursivelyApplyRule(rule, currentAST);
+        transformed = recursivelyApplyRule(rule, currentAST);
 
-      if (transformed && JSON.stringify(transformed) !== JSON.stringify(currentAST)) {
-        console.log(`✅ Regla aplicada: ${rule.name}`);
-        console.log("📤 AST transformado:", JSON.stringify(transformed, null, 2));
+        if (transformed && !deepEquals(transformed, currentAST)) {
+          console.log(`✅ Regla aplicada: ${rule.name}`);
+          console.log("📤 AST transformado:", JSON.stringify(transformed, null, 2));
 
-        const stepData: RuleStep = {
-          stepNumber: step++,
-          description: rule.description(currentAST),
-          ast: transformed,
-          latex: ASTToLatex(transformed),
-        };
+          const stepData: RuleStep = {
+            stepNumber: step++,
+            description: rule.description(currentAST),
+            ast: transformed,
+            latex: ASTToLatex(transformed),
+          };
 
-        steps.push(stepData);
-        currentAST = transformed;
-        break; // 🧠 Muy importante: reinicia desde la primera regla
-      } else {
-        console.log(`⛔ No aplica: ${rule.name}`);
+          steps.push(stepData);
+          currentAST = transformed;
+          this.latestAST = currentAST; // 🆕 Actualizamos latestAST
+          break;
+        } else {
+          console.log(`⛔ No aplica: ${rule.name}`);
+        }
       }
+
+      if (!transformed) break;
     }
 
-    if (!transformed) {
-      break; // 🚪 Salir cuando ninguna regla aplica más
-    }
+    return steps;
   }
 
-  return steps;
+  // ✅ Nuevo método para exponer el AST final
+  getLatestAST(): ASTNode {
+    if (!this.latestAST) {
+      throw new Error("No se ha aplicado ninguna regla aún.");
+    }
+    return this.latestAST;
+  }
 }
 
-}

@@ -1,6 +1,7 @@
 import { Rule } from "../steps/Rule";
 import { ASTNode, OperatorNode } from "../../types/AST";
 import { deepEquals } from "./DeepEquals";
+import { FlattenAdditionRule } from "./FlattenAdditionRule";
 
 export class OrderAndGroupRule implements Rule {
   name = "OrderAndGroupRule";
@@ -24,7 +25,15 @@ export class OrderAndGroupRule implements Rule {
       return newNode;
     });
 
-    return !deepEquals(rebuilt, node) ? rebuilt : null;
+    // ✅ Compara versiones aplanadas para evitar reordenar infinitamente
+    const flattener = new FlattenAdditionRule();
+    const flatOriginal = flattener.apply(node) ?? node;
+    const flatRebuilt = flattener.apply(rebuilt) ?? rebuilt;
+
+    if (deepEquals(flatOriginal, flatRebuilt)) return null;
+
+    // 🔁 Devuelve ya aplanado para prevenir loops con otras reglas
+    return flatRebuilt;
   }
 
   private flattenSum(node: ASTNode): ASTNode[] {
@@ -51,7 +60,7 @@ export class OrderAndGroupRule implements Rule {
       return 0;
     };
 
-    return getDegree(b) - getDegree(a); // orden descendente
+    return getDegree(b) - getDegree(a); // Mayor grado primero
   };
 
   description(): string {

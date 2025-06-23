@@ -12,23 +12,51 @@ import { ExpandMultiplicationRule } from "./ExpandMultiplicationRule";
 import { DistributeNegativeSignRule } from "./DistributeNegativeSignRule";
 import { CombineLikeTermsRule } from "./CombineLikeTermsRule";
 import { EvaluateArithmeticRule } from "./EvaluateArithmeticRule";
-import { EvaluateNestedMultiplicationRule } from "./EvaluateNestedMultiplicationRule";
 import { OrderAndGroupRule } from "./OrderAndGroupRule";
+import { SimplifyMultiplicationConstantsRule } from "./SimplifyMultiplicationConstantsRule";
+import { FlattenMultiplicationRule } from "./FlattenMultiplicationRule";
+import { FlattenAdditionRule } from "./FlattenAdditionRule";
+import { PrettyPolynomialRule } from "./PrettyPolynomialRule";
+import { PolynomialBeautifyRule } from "./PolynomialBeautifyRule";
 
 export const allRules: Rule[] = [
+  // 🔹 1. Limpiar agrupaciones y simplificar estructura
   new FlattenGroupingRule(),
-  new ExpandMultiplicationRule(),
-  new EvaluateNestedMultiplicationRule(),
-  new CombineLikeTermsRule(),
-  new DistributeNegativeSignRule(),
+
+  // 🔹 2. Expandir potencias como (a + b)^n
   new ExpandPowerOfSumRule(),
+
+  // 🔹 3. Expandir multiplicaciones tipo a(b + c)
+  new ExpandMultiplicationRule(),
+
+  // 🔹 4. Reestructurar multiplicaciones y combinar constantes
+  new FlattenMultiplicationRule(),
+  new SimplifyMultiplicationConstantsRule(),
+
+  // 🔹 5. Evaluar operaciones entre literales
+  new EvaluateArithmeticRule(),
+
+    new FlattenAdditionRule(),
+  new PrettyPolynomialRule(),
+  new PolynomialBeautifyRule(),
+
+  // 🔹 6. Distribuciones adicionales y signos negativos
+  new DistributeNegativeSignRule(),
   new DistributiveRule(),
-  new TranspositionRule(),
+
+  // 🔹 7. Agrupaciones algebraicas
+  new CombineLikeTermsRule(),
   new SimplifyLikeTermsRule(),
-  new FractionReductionRule(),
+
+  // 🔹 8. Reglas de limpieza
   new RemoveZeroRule(),
   new IdentityRule(),
-  new PowerToProductRule(),
- new EvaluateArithmeticRule(),
- new OrderAndGroupRule()
+  new FractionReductionRule(),
+
+  // 🔹 9. Reglas estructurales y de forma
+  new TranspositionRule(),
+  new OrderAndGroupRule()
+
+  // 🔸 Opcional: si necesitas que x² vuelva a x·x (desactivada para evitar ciclos)
+  // new PowerToProductRule(),
 ];
