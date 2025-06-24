@@ -8,8 +8,8 @@ export class EvaluateArithmeticRule implements Rule {
   apply(node: ASTNode): ASTNode | null {
     if (node.type !== "Operator") return null;
 
-    const left = this.apply(node.left);   // aplica recursivamente
-    const right = this.apply(node.right); // aplica recursivamente
+    const left = this.apply(node.left);
+    const right = this.apply(node.right);
 
     const newNode: ASTNode = {
       ...node,
@@ -17,44 +17,32 @@ export class EvaluateArithmeticRule implements Rule {
       right: right ?? node.right,
     };
 
-    // Si ambos lados son literales, evaluar
-    if (
-      newNode.left.type === "Literal" &&
-      newNode.right.type === "Literal"
-    ) {
+    // Intentar evaluar si ambos lados son literales
+    if (newNode.left.type === "Literal" && newNode.right.type === "Literal") {
       const a = newNode.left.value;
       const b = newNode.right.value;
-      let value: number | null = null;
+      const op = newNode.operator;
 
-      switch (newNode.operator) {
-        case "+":
-          value = a + b;
-          break;
-        case "-":
-          value = a - b;
-          break;
-        case "*":
-          value = a * b;
-          break;
-        case "/":
-          value = b !== 0 ? a / b : null;
-          break;
-        case "^":
-          value = Math.pow(a, b);
-          break;
-      }
-
-      if (value !== null) {
-        return { type: "Literal", value };
+      const result = this.eval(a, b, op);
+      if (result !== null) {
+        return { type: "Literal", value: result };
       }
     }
 
-    // Si se cambió algo pero no se evaluó
-    if (!deepEquals(newNode, node)) {
-      return newNode;
-    }
-
+    // No hubo evaluación directa, pero sí cambios
+    if (!deepEquals(newNode, node)) return newNode;
     return null;
+  }
+
+  private eval(a: number, b: number, op: string): number | null {
+    switch (op) {
+      case "+": return a + b;
+      case "-": return a - b;
+      case "*": return a * b;
+      case "/": return b !== 0 ? a / b : null;
+      case "^": return Math.pow(a, b);
+      default: return null;
+    }
   }
 
   description(): string {

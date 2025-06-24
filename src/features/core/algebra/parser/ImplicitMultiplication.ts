@@ -7,11 +7,21 @@ export function insertImplicitMultiplication(tokens: string[]): string[] {
 
     result.push(curr);
 
+    // Insertar * entre: número o variable o ')' seguido de '(' o variable
     if (
       (isLiteralOrVariable(curr) || curr === ")") &&
       (next === "(" || /^[a-zA-Z]$/.test(next))
     ) {
       result.push("*");
+    }
+
+    // Detectar 4x como '4', '*', 'x'
+    const match = curr.match(/^(\d+)([a-zA-Z])$/);
+    if (match) {
+      result.pop(); // eliminar el token original (ej. '4x')
+      result.push(match[1]); // número
+      result.push("*");
+      result.push(match[2]); // variable
     }
   }
 

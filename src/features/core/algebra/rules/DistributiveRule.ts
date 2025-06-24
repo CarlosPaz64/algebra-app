@@ -1,5 +1,5 @@
 import { Rule } from "../steps/Rule";
-import { ASTNode, OperatorNode } from "../../types/AST";
+import { ASTNode } from "../../types/AST";
 import { deepEquals } from "./DeepEquals";
 
 export class DistributiveRule implements Rule {
@@ -8,12 +8,11 @@ export class DistributiveRule implements Rule {
   apply(node: ASTNode): ASTNode | null {
     const distributed = this.distribute(node);
 
-    // Si hubo cambio real
     if (distributed && !deepEquals(distributed, node)) {
       return distributed;
     }
 
-    // 🔁 Recorre hijos solo si no se transformó el nodo actual
+    // Recorre hijos si no se transformó este nodo
     if (node.type === "Operator") {
       const newLeft = this.apply(node.left);
       const newRight = this.apply(node.right);
@@ -31,13 +30,15 @@ export class DistributiveRule implements Rule {
   }
 
   private distribute(node: ASTNode): ASTNode | null {
-    // a * (b + c) → ab + ac
     if (
       node.type === "Operator" &&
       node.operator === "*" &&
       node.right.type === "Operator" &&
       (node.right.operator === "+" || node.right.operator === "-")
     ) {
+      // Previene re-aplicación sobre nodos ya distribuidos
+      if (this.isDistributed(node.left, node.right)) return null;
+
       return {
         type: "Operator",
         operator: node.right.operator,
@@ -56,13 +57,14 @@ export class DistributiveRule implements Rule {
       };
     }
 
-    // (a + b) * c → ac + bc
     if (
       node.type === "Operator" &&
       node.operator === "*" &&
       node.left.type === "Operator" &&
       (node.left.operator === "+" || node.left.operator === "-")
     ) {
+      if (this.isDistributed(node.right, node.left)) return null;
+
       return {
         type: "Operator",
         operator: node.left.operator,
@@ -82,6 +84,18 @@ export class DistributiveRule implements Rule {
     }
 
     return null;
+  }
+
+  private isDistributed(factor: ASTNode, sumNode: ASTNode): boolean {
+    return (
+      sumNode.type === "Operator" &&
+      (sumNode.left.type === "Operator" &&
+        sumNode.left.operator === "*" &&
+        deepEquals(sumNode.left.left, factor)) &&
+      (sumNode.right.type === "Operator" &&
+        sumNode.right.operator === "*" &&
+        deepEquals(sumNode.right.left, factor))
+    );
   }
 
   description(): string {

@@ -1,66 +1,68 @@
 import { Rule } from "../steps/Rule";
-import { DistributiveRule } from "./DistributiveRule";
-import { TranspositionRule } from "./TranspositionRule";
-import { SimplifyLikeTermsRule } from "./SimplifyLikeTermsRule";
-import { FractionReductionRule } from "./FractionReductionRule";
-import { RemoveZeroRule } from "./RemoveZeroRule";
-import { IdentityRule } from "./IdentityRule";
-import { PowerToProductRule } from "./PowerToProductRule";
 import { FlattenGroupingRule } from "./FlattenGroupingRule";
 import { ExpandPowerOfSumRule } from "./ExpandPowerOfSumRule";
-import { ExpandMultiplicationRule } from "./ExpandMultiplicationRule";
-import { DistributeNegativeSignRule } from "./DistributeNegativeSignRule";
-import { CombineLikeTermsRule } from "./CombineLikeTermsRule";
-import { EvaluateArithmeticRule } from "./EvaluateArithmeticRule";
-import { OrderAndGroupRule } from "./OrderAndGroupRule";
-import { SimplifyMultiplicationConstantsRule } from "./SimplifyMultiplicationConstantsRule";
 import { FlattenMultiplicationRule } from "./FlattenMultiplicationRule";
+import { SimplifyMultiplicationConstantsRule } from "./SimplifyMultiplicationConstantsRule";
+import { NormalizeMultiplicationOrderRule } from "./NormalizeMultiplicationOrderRule";
 import { FlattenAdditionRule } from "./FlattenAdditionRule";
+import { ExpandMultiplicationRule } from "./ExpandMultiplicationRule";
+import { EvaluateArithmeticRule } from "./EvaluateArithmeticRule";
+import { EvaluateAdditionRule } from "./EvaluateAdditionRule";
+import { CombineLikeTermsAndConstantsRule } from "./CombineLikeTermsAndConstantsRule";
+import { DistributeDivisionOverAdditionRule } from "./DistributeDivisionOverAdditionRule";
+import { DistributeNegativeSignRule } from "./DistributeNegativeSignRule";
+import { RemoveZeroRule } from "./RemoveZeroRule";
+import { IdentityRule } from "./IdentityRule";
+import { FractionReductionRule } from "./FractionReductionRule";
+import { PowerSimplifyRule } from "./PowerSimplifyRule";
 import { PrettyPolynomialRule } from "./PrettyPolynomialRule";
 import { PolynomialBeautifyRule } from "./PolynomialBeautifyRule";
-import { PowerSimplifyRule } from "./PowerSimplifyRule";
-import { CombineLikeExponentsRule } from "./CombineLikeExponentsRule";
+import { OrderAndGroupRule } from "./OrderAndGroupRule";
+import { TranspositionRule } from "./TranspositionRule";
+// (otros imports opcionales…)
 
 export const allRules: Rule[] = [
-  // 🔹 1. Limpiar agrupaciones y simplificar estructura
+  // 1️⃣ Limpieza de agrupaciones
   new FlattenGroupingRule(),
 
-  // 🔹 2. Expandir potencias como (a + b)^n
+  // 2️⃣ Expande (a + b)^2 → a^2 + 2ab + b^2
   new ExpandPowerOfSumRule(),
 
-  // 🔹 3. Expandir multiplicaciones tipo a(b + c)
+  // 3️⃣ Simplifica el interior de las multiplicaciones recién creadas
+  new FlattenMultiplicationRule(),
+  new SimplifyMultiplicationConstantsRule(),
+  new NormalizeMultiplicationOrderRule(),
+
+  // 4️⃣ Aplana sumas anidadas internas
+  new FlattenAdditionRule(),
+
+  // 5️⃣ Distribuye productos sobre sumas (2·(…+…+…))
   new ExpandMultiplicationRule(),
 
-  // 🔹 4. Reestructurar multiplicaciones y combinar constantes
+  // 6️⃣ Limpia de nuevo multiplicaciones
   new FlattenMultiplicationRule(),
   new SimplifyMultiplicationConstantsRule(),
 
-  // 🔹 5. Evaluar operaciones entre literales
+  // 7️⃣ Evalúa operaciones puramente numéricas
   new EvaluateArithmeticRule(),
+  new EvaluateAdditionRule(),
 
-    new FlattenAdditionRule(),
-  new PrettyPolynomialRule(),
-  new PowerSimplifyRule(),
-  // new CombineLikeExponentsRule(),
-  new PolynomialBeautifyRule(),
+  // 8️⃣ Combina términos semejantes y constantes
+  new CombineLikeTermsAndConstantsRule(),
 
-  // 🔹 6. Distribuciones adicionales y signos negativos
+  // 9️⃣ Reglas especiales de división y signos
+  new DistributeDivisionOverAdditionRule(),
   new DistributeNegativeSignRule(),
-  new DistributiveRule(),
 
-  // 🔹 7. Agrupaciones algebraicas
-  new CombineLikeTermsRule(),
-  new SimplifyLikeTermsRule(),
-
-  // 🔹 8. Reglas de limpieza
+  // 🔟 Limpieza final de ceros, identidades y fracciones
   new RemoveZeroRule(),
   new IdentityRule(),
   new FractionReductionRule(),
 
-  // 🔹 9. Reglas estructurales y de forma
+  // 1️⃣1️⃣ Embellecimiento y orden
+  new PowerSimplifyRule(),
+  new PrettyPolynomialRule(),
+  new PolynomialBeautifyRule(),
+  new OrderAndGroupRule(),
   new TranspositionRule(),
-  new OrderAndGroupRule()
-
-  // 🔸 Opcional: si necesitas que x² vuelva a x·x (desactivada para evitar ciclos)
-  // new PowerToProductRule(),
 ];

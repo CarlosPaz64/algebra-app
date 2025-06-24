@@ -6,30 +6,34 @@ import { deepEquals } from "./DeepEquals";
 export class ExpandMultiplicationRule implements Rule {
   name = "ExpandMultiplicationRule";
 
-  apply(node: ASTNode): ASTNode | null {
-    const result = this.expand(node);
+apply(node: ASTNode): ASTNode | null {
+  // 🔁 Aplica primero a los hijos
+  if (node.type === "Operator") {
+    const newLeft = this.apply(node.left) ?? node.left;
+    const newRight = this.apply(node.right) ?? node.right;
 
-    // Si hubo una expansión válida que cambió el AST
-    if (result && !deepEquals(result, node)) {
-      return result;
+    const updatedNode: ASTNode = {
+      ...node,
+      left: newLeft,
+      right: newRight,
+    };
+
+    // 🧠 Intenta expandir el nodo actual ya actualizado
+    const expanded = this.expand(updatedNode);
+    if (expanded && !deepEquals(expanded, updatedNode)) {
+      console.log("✅ ExpandMultiplicationRule aplicada a:", JSON.stringify(updatedNode, null, 2));
+      return expanded;
     }
 
-    // 🔁 Solo seguimos con la recursión si el nodo actual no se transformó
-    if (node.type === "Operator") {
-      const newLeft = this.apply(node.left);
-      const newRight = this.apply(node.right);
-
-      if (newLeft || newRight) {
-        return {
-          ...node,
-          left: newLeft ?? node.left,
-          right: newRight ?? node.right,
-        };
-      }
+    // Si hubo cambios en hijos, actualiza el nodo aunque no se haya expandido
+    if (!deepEquals(updatedNode, node)) {
+      return updatedNode;
     }
-
-    return null;
   }
+
+  return null;
+}
+
 
 
 

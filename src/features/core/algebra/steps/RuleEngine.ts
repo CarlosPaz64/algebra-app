@@ -3,58 +3,80 @@ import { Rule } from "./Rule";
 import { RuleStep } from "../../types/RuleStep";
 import { ASTToLatex } from "../latex/ASTToLatex";
 import { recursivelyApplyRule } from "../rules/RecursivelyApplyRule";
-import { deepEquals } from "../rules/DeepEquals"; // ✅ Importante para evitar ciclos
+import { deepEquals } from "../rules/DeepEquals";
 
-/**
- * El motor de reglas aplica transformaciones algebraicas al AST,
- * una por una, y registra cada paso como una entrada en el historial.
- */
+// Función para calcular el "tamaño" del árbol AST
+function treeSize(node: ASTNode): number {
+  if (node.type === "Literal" || node.type === "Variable") return 1;
+  if (node.type === "Grouping") return treeSize(node.expression);
+  if (node.type === "Operator") return 1 + treeSize(node.left) + treeSize(node.right);
+  if (node.type === "Function") return 1 + node.args.reduce((acc, a) => acc + treeSize(a), 0);
+  return 1;
+}
+
 export class RuleEngine {
-  private latestAST: ASTNode | null = null; // 🆕 Propiedad para acceder luego
+  private latestAST: ASTNode | null = null;
+  private seenASTs = new Set<string>();
+  // Nombres de reglas que pueden aumentar el tamaño del AST
+  private expansionRules = new Set([
+    "ExpandPowerOfSumRule",
+    "ExpandMultiplicationRule",
+    "Distributiva" // si tu rule.name es así
+  ]);
 
   constructor(private rules: Rule[]) {}
 
   applyAll(ast: ASTNode): RuleStep[] {
     const steps: RuleStep[] = [];
     let currentAST = ast;
-    this.latestAST = currentAST; // 🔄 Inicializamos latestAST
+    this.latestAST = currentAST;
     let step = 1;
+    const MAX_STEPS = 30;
 
-    while (true) {
+    while (step <= MAX_STEPS) {
       let transformed: ASTNode | null = null;
 
       for (const rule of this.rules) {
-        console.log(`🔍 Probando regla: ${rule.name}`);
+        const result = recursivelyApplyRule(rule, currentAST);
+        if (!result || deepEquals(result, currentAST)) continue;
 
-        transformed = recursivelyApplyRule(rule, currentAST);
+        const grew = treeSize(result) > treeSize(currentAST);
+        const allowGrowth = this.expansionRules.has(rule.name);
 
-        if (transformed && !deepEquals(transformed, currentAST)) {
-          console.log(`✅ Regla aplicada: ${rule.name}`);
-          console.log("📤 AST transformado:", JSON.stringify(transformed, null, 2));
+        // ❶ Si creció y NO es regla de expansión, saltar
+        if (grew && !allowGrowth) continue;
 
-          const stepData: RuleStep = {
-            stepNumber: step++,
-            description: rule.description(currentAST),
-            ast: transformed,
-            latex: ASTToLatex(transformed),
-          };
-
-          steps.push(stepData);
-          currentAST = transformed;
-          this.latestAST = currentAST; // 🆕 Actualizamos latestAST
-          break;
-        } else {
-          console.log(`⛔ No aplica: ${rule.name}`);
+        // ❷ Si ya vimos este AST, posible bucle → cortar
+        const hash = JSON.stringify(result);
+        if (this.seenASTs.has(hash)) {
+          console.warn("⚠️ AST repetido detectado. Posible bucle.");
+          return steps;
         }
+
+        // ❸ Aplicar transformación
+        this.seenASTs.add(hash);
+        const stepData: RuleStep = {
+          stepNumber: step++,
+          description: rule.description(currentAST),
+          ast: result,
+          latex: ASTToLatex(result),
+        };
+        steps.push(stepData);
+        currentAST = result;
+        this.latestAST = result;
+        transformed = result;
+        break;
       }
 
       if (!transformed) break;
     }
 
+    if (step > MAX_STEPS) {
+      console.warn("⛔ Se alcanzó el límite de pasos del motor. Posible ciclo infinito.");
+    }
     return steps;
   }
 
-  // ✅ Nuevo método para exponer el AST final
   getLatestAST(): ASTNode {
     if (!this.latestAST) {
       throw new Error("No se ha aplicado ninguna regla aún.");
@@ -62,4 +84,3 @@ export class RuleEngine {
     return this.latestAST;
   }
 }
-
