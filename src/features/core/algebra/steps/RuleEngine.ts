@@ -1,86 +1,101 @@
-import { ASTNode } from "../../types/AST";
+import { ASTNode, OperatorNode } from "../../types/AST";
 import { Rule } from "./Rule";
 import { RuleStep } from "../../types/RuleStep";
 import { ASTToLatex } from "../latex/ASTToLatex";
-import { recursivelyApplyRule } from "../rules/RecursivelyApplyRule";
-import { deepEquals } from "../rules/DeepEquals";
 
-// Función para calcular el "tamaño" del árbol AST
-function treeSize(node: ASTNode): number {
-  if (node.type === "Literal" || node.type === "Variable") return 1;
-  if (node.type === "Grouping") return treeSize(node.expression);
-  if (node.type === "Operator") return 1 + treeSize(node.left) + treeSize(node.right);
-  if (node.type === "Function") return 1 + node.args.reduce((acc, a) => acc + treeSize(a), 0);
-  return 1;
+/** Guardián: verifica que el nodo sea OperatorNode */
+function isOperatorNode(node: ASTNode): node is OperatorNode {
+  return node.type === "Operator";
 }
 
-export class RuleEngine {
-  private latestAST: ASTNode | null = null;
-  private seenASTs = new Set<string>();
-  // Nombres de reglas que pueden aumentar el tamaño del AST
-  private expansionRules = new Set([
-    "ExpandPowerOfSumRule",
-    "ExpandMultiplicationRule",
-    "Distributiva" // si tu rule.name es así
-  ]);
+/** Comprueba si la ecuación ya está resuelta: Variable = Literal */
+function isSolved(eq: OperatorNode): boolean {
+  return eq.left.type === "Variable" && eq.right.type === "Literal";
+}
+
+export class EquationRuleEngine {
+  private seen = new Set<string>();
+  private stepCount = 0;
+  private readonly MAX_STEPS = 30;
 
   constructor(private rules: Rule[]) {}
 
-  applyAll(ast: ASTNode): RuleStep[] {
-    const steps: RuleStep[] = [];
-    let currentAST = ast;
-    this.latestAST = currentAST;
-    let step = 1;
-    const MAX_STEPS = 30;
+  solve(initialAst: ASTNode): RuleStep[] {
+    // 1) Validar AST inicial
+    if (!isOperatorNode(initialAst) || initialAst.operator !== "=") {
+      throw new Error("El AST inicial debe ser un OperatorNode con operator '='");
+    }
+    let current: OperatorNode = initialAst;
 
-    while (step <= MAX_STEPS) {
-      let transformed: ASTNode | null = null;
+    // 2) Paso 0: registrar la ecuación inicial
+    const steps: RuleStep[] = [{
+      stepNumber: 0,
+      description: "Ecuación inicial",
+      ast: current,
+      latex: ASTToLatex(current),
+    }];
+    this.seen.add(JSON.stringify(current));
 
-      for (const rule of this.rules) {
-        const result = recursivelyApplyRule(rule, currentAST);
-        if (!result || deepEquals(result, currentAST)) continue;
-
-        const grew = treeSize(result) > treeSize(currentAST);
-        const allowGrowth = this.expansionRules.has(rule.name);
-
-        // ❶ Si creció y NO es regla de expansión, saltar
-        if (grew && !allowGrowth) continue;
-
-        // ❷ Si ya vimos este AST, posible bucle → cortar
-        const hash = JSON.stringify(result);
-        if (this.seenASTs.has(hash)) {
-          console.warn("⚠️ AST repetido detectado. Posible bucle.");
-          return steps;
-        }
-
-        // ❸ Aplicar transformación
-        this.seenASTs.add(hash);
-        const stepData: RuleStep = {
-          stepNumber: step++,
-          description: rule.description(currentAST),
-          ast: result,
-          latex: ASTToLatex(result),
-        };
-        steps.push(stepData);
-        currentAST = result;
-        this.latestAST = result;
-        transformed = result;
+    // 3) Bucle principal
+    while (this.stepCount < this.MAX_STEPS) {
+      // 3a) ¿Está resuelta?
+      if (isSolved(current)) {
+        this.stepCount++;
+        steps.push({
+          stepNumber: this.stepCount,
+          description: "¡Ecuación resuelta!",
+          ast: current,
+          latex: ASTToLatex(current),
+        });
         break;
       }
 
-      if (!transformed) break;
+      let applied = false;
+
+      // 3b) Probar cada regla sobre el nodo raíz
+      for (const rule of this.rules) {
+        const nextAst = rule.apply(current);
+        if (!nextAst) continue;
+
+        // 3c) Asegurarnos de que sigue siendo OperatorNode
+        if (!isOperatorNode(nextAst)) {
+          console.warn(`La regla ${rule.name} devolvió un AST no-Operator; se ignora.`);
+          continue;
+        }
+
+        const hash = JSON.stringify(nextAst);
+        if (this.seen.has(hash)) {
+          console.warn("⚠️ Ciclo detectado. Deteniendo engine.");
+          return steps;
+        }
+
+        // 3d) Registrar paso
+        this.seen.add(hash);
+        this.stepCount++;
+        steps.push({
+          stepNumber: this.stepCount,
+          description: rule.description(current),
+          ast: nextAst,
+          latex: ASTToLatex(nextAst),
+        });
+
+        current = nextAst;
+        applied = true;
+        break;
+      }
+
+      // 3e) Si no se aplicó ninguna regla, salir
+      if (!applied) {
+        console.warn("❌ No hay más reglas aplicables.");
+        break;
+      }
     }
 
-    if (step > MAX_STEPS) {
-      console.warn("⛔ Se alcanzó el límite de pasos del motor. Posible ciclo infinito.");
+    // 4) Límite de pasos
+    if (this.stepCount >= this.MAX_STEPS) {
+      console.warn("⛔ Límite de pasos alcanzado.");
     }
+
     return steps;
-  }
-
-  getLatestAST(): ASTNode {
-    if (!this.latestAST) {
-      throw new Error("No se ha aplicado ninguna regla aún.");
-    }
-    return this.latestAST;
   }
 }
