@@ -1,8 +1,15 @@
 // Comando para compilar el proyecto "desde un build"
 // npx expo run:android
 
-import React, { useEffect, useState } from "react";
-import { ScrollView, Text, View, TextInput, StyleSheet } from "react-native";
+import React, { useState } from "react";
+import {
+  ScrollView,
+  Text,
+  View,
+  TextInput,
+  StyleSheet,
+  Button,
+} from "react-native";
 import { solveExpression } from "./src/features/core/algebra/steps";
 import { RuleStep } from "./src/features/core/types/RuleStep";
 import { MathRenderer } from "./MathRender";
@@ -12,7 +19,7 @@ export const DebugEquationSolver = () => {
   const [input, setInput] = useState<string>("2*x + 3 = 7");
   const [error, setError] = useState<string>("");
 
-  useEffect(() => {
+  const handleSolve = () => {
     try {
       const result = solveExpression(input);
       setSteps(result);
@@ -22,7 +29,7 @@ export const DebugEquationSolver = () => {
       setSteps([]);
       setError("Ecuación inválida");
     }
-  }, [input]);
+  };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -34,6 +41,10 @@ export const DebugEquationSolver = () => {
         value={input}
         onChangeText={setInput}
       />
+
+      <View style={styles.buttonContainer}>
+        <Button title="Resolver" onPress={handleSolve} />
+      </View>
 
       {error ? (
         <Text style={styles.error}>{error}</Text>
@@ -59,8 +70,12 @@ const styles = StyleSheet.create({
     borderColor: "#ccc",
     borderRadius: 8,
     padding: 10,
-    marginBottom: 20,
+    marginBottom: 12,
     fontSize: 18,
+  },
+  buttonContainer: {
+    marginBottom: 20,
+    alignSelf: "flex-start",
   },
   error: { color: "red", marginBottom: 20 },
   step: { marginBottom: 24 },
