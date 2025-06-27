@@ -1,7 +1,8 @@
+// src/features/core/algebra/steps/index.ts
+
 import * as nerdamer from "nerdamer";
 import "nerdamer/Solve";
 import { evaluate } from "mathjs";
-import numeric from "numeric";
 import { RuleStep } from "../../types/RuleStep";
 import {
   ASTNode,
@@ -10,15 +11,43 @@ import {
   LiteralNode,
 } from "../../types/AST";
 
+/** Busca una raíz de f en [a,b] con bisección */
+function bisection(
+  f: (x: number) => number,
+  a: number,
+  b: number,
+  tol: number = 1e-7,
+  maxIter: number = 100
+): number {
+  let fa = f(a),
+      fb = f(b);
+  if (fa * fb > 0) {
+    throw new Error("Bisección: f(a) y f(b) sin signo distinto");
+  }
+  let mid = a;
+  for (let i = 0; i < maxIter; i++) {
+    mid = (a + b) / 2;
+    const fm = f(mid);
+    if (Math.abs(fm) < tol) return mid;
+    if (fa * fm < 0) {
+      b = mid;
+      fb = fm;
+    } else {
+      a = mid;
+      fa = fm;
+    }
+  }
+  return mid;
+}
+
 export function solveExpression(expr: string): RuleStep[] {
-  // 0) Validar '=' y separar
   const idx = expr.indexOf("=");
   if (idx < 0) throw new Error("La ecuación debe contener '='");
   const lhs = expr.slice(0, idx).trim();
   const rhs = expr.slice(idx + 1).trim();
   const full = `${lhs}=${rhs}`;
 
-  // Paso 0: ecuación inicial
+  // Paso 0: inicial
   const initialAst: OperatorNode = {
     type: "Operator",
     operator: "=",
@@ -32,7 +61,6 @@ export function solveExpression(expr: string): RuleStep[] {
     latex: full.replace(/\*/g, "\\cdot "),
   }];
 
-  // Detectar incógnita (la primera letra de lhs)
   const variable = (lhs.match(/[a-zA-Z]+/) ?? ["x"])[0];
 
   // 1) Intento simbólico con Nerdamer
@@ -40,31 +68,42 @@ export function solveExpression(expr: string): RuleStep[] {
   try {
     const raw = (nerdamer as any).solve(full, variable);
     const rawStr = raw?.toString?.() ?? "";
-    solutions = rawStr.includes(",")
+    solutions = rawStr
       ? rawStr.split(",").map((s: string) => s.trim()).filter(Boolean)
-      : rawStr
-        ? [rawStr.trim()]
-        : [];
+      : [];
   } catch {
-    // falla simbólico: pasamos a numérico
+    // pasa al numérico
   }
 
-  // 2) Fallback numérico si no hay soluciones simbólicas
+  // 2) Fallback numérico con bisección
   if (solutions.length === 0) {
-    // definimos f(x) = lhs - rhs usando evaluate()
+    // f(x) = lhs - rhs
     const f = (x: number) => {
       const scope = { [variable]: x };
       return (evaluate(lhs, scope) as number) - (evaluate(rhs, scope) as number);
     };
 
-    let root: number;
-    try {
-      root = numeric.newton(f, 0);
-      if (isNaN(root) || !isFinite(root)) throw new Error();
-      solutions = [root.toString()];
-    } catch {
+    // busca en varios intervalos posibles
+    const intervals = [
+      [-10, 10],
+      [0, 10],
+      [-10, 0],
+      [0, Math.PI],
+      [Math.PI / 2, Math.PI * 2]
+    ];
+    let root: number | null = null;
+    for (const [a, b] of intervals) {
+      try {
+        root = bisection(f, a, b);
+        break;
+      } catch {
+        continue;
+      }
+    }
+    if (root === null) {
       throw new Error("No se pudo resolver la ecuación ni simbólica ni numéricamente");
     }
+    solutions = [root.toString()];
   }
 
   // 3) Construir paso resuelto
@@ -75,21 +114,19 @@ export function solveExpression(expr: string): RuleStep[] {
       ? ({ type: "Literal", value: num } as LiteralNode)
       : ({ type: "Variable", name: sol } as VariableNode);
 
-    const solvedAst: OperatorNode = {
+    const solved: OperatorNode = {
       type: "Operator",
       operator: "=",
-      left: { type: "Variable", name: variable },
+      left:  { type: "Variable", name: variable },
       right: rightAst,
     };
-
     steps.push({
       stepNumber: 1,
       description: "Ecuación resuelta",
-      ast: solvedAst,
+      ast: solved,
       latex: `${variable} = ${sol}`,
     });
   } else {
-    // múltiples soluciones
     steps.push({
       stepNumber: 1,
       description: `Soluciones (${solutions.length})`,
