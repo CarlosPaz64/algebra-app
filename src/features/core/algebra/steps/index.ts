@@ -1,5 +1,3 @@
-// src/features/core/algebra/steps/index.ts
-
 import * as nerdamer from "nerdamer";
 import "nerdamer/Solve";
 import { evaluate } from "mathjs";
