@@ -9,7 +9,7 @@ import RootNavigator from "./src/navigation/RootNavigation";
 export default function App() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#f4f4f4" }}>
-      <RootNavigator /> {/* NAVEGACIÓN COMPLETA */}
+      <RootNavigator />
     </SafeAreaView>
   );
 }

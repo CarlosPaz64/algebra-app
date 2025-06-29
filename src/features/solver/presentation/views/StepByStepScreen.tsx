@@ -1,5 +1,6 @@
+// src/features/solver/presentation/views/StepByStepScreen.tsx
 import React from "react";
-import { View, ScrollView, Button, Text, StyleSheet } from "react-native";
+import { View, ScrollView, Button, Text, StyleSheet, Alert } from "react-native";
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import { RootStackParamList } from "../../../../navigation/RootNavigation";
 import { useEquationStore } from "../UseEquationStore";
@@ -10,10 +11,19 @@ export default function StepByStepScreen() {
   const navigation = useNavigation();
   const { saveEquation } = useEquationStore();
 
-  const { equation } = route.params;
+  const equation = route.params?.equation;
 
-  const handleSave = () => {
-    saveEquation(equation);
+  if (!equation) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>No hay datos disponibles</Text>
+      </View>
+    );
+  }
+
+  const handleSave = async () => {
+    await saveEquation(equation);
+    Alert.alert("Guardado", "La ecuación fue guardada con éxito.");
     navigation.goBack();
   };
 

@@ -17,14 +17,17 @@ export default function HomeScreen() {
     try {
       const steps = solveStepByStep(input);
       const finalStep = steps[steps.length - 1];
-      setEquation({
+
+      const newEquation: Equation = {
         id: Date.now().toString(),
         rawInput: input,
         parsed: finalStep.ast,
         steps,
         solved: true,
         createdAt: new Date().toISOString(),
-      });
+      };
+
+      setEquation(newEquation);
       setLatex(finalStep.latex);
     } catch (e) {
       console.error(e);
@@ -54,7 +57,6 @@ export default function HomeScreen() {
     </ScrollView>
   );
 }
-
 
 const styles = StyleSheet.create({
   container: { padding: 16 },
