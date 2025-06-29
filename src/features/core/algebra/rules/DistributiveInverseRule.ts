@@ -8,11 +8,12 @@ export class DistributiveInverseRule implements Rule {
   name = "DistributiveInverseRule";
 
   apply(ast: ASTNode): ASTNode | null {
-    if (ast.type !== "Operator") return null;
+    if (ast.type !== "Operator" || ast.operator !== "=") return null;
     const eq = ast as OperatorNode;
 
     for (const side of ["left", "right"] as const) {
       const node = eq[side];
+
       if (
         node.type === "Operator" &&
         node.operator === "+" &&
@@ -21,26 +22,35 @@ export class DistributiveInverseRule implements Rule {
       ) {
         const L = node.left as OperatorNode;
         const R = node.right as OperatorNode;
-        if (
+
+        const isValid =
           L.operator === "*" &&
           R.operator === "*" &&
           L.left.type === "Variable" &&
           R.left.type === "Variable" &&
-          (L.left as VariableNode).name === (R.left as VariableNode).name
-        ) {
-          const xvar = L.left;
-          const a = L.right;
-          const b = R.right;
+          L.left.name === R.left.name;
+
+        if (isValid) {
           const factored: ASTNode = {
             type: "Operator",
             operator: "*",
-            left: xvar,
-            right: { type: "Operator", operator: "+", left: a, right: b },
+            left: L.left, // x
+            right: {
+              type: "Operator",
+              operator: "+",
+              left: L.right,
+              right: R.right,
+            },
           };
-          return { ...eq, [side]: factored } as OperatorNode;
+
+          return {
+            ...eq,
+            [side]: factored,
+          } as OperatorNode;
         }
       }
     }
+
     return null;
   }
 

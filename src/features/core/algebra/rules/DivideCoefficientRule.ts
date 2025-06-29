@@ -17,21 +17,24 @@ export class DivideCoefficientRule implements Rule {
       eq.left.left.type === "Literal" &&
       eq.left.right.type === "Variable"
     ) {
-      const a = (eq.left.left as LiteralNode).value;
-      const xvar = eq.left.right as VariableNode;
+      const a = eq.left.left.value;
+      const x = eq.left.right;
+
       const newRight: ASTNode = {
         type: "Operator",
         operator: "/",
         left: eq.right,
         right: { type: "Literal", value: a },
       };
+
       return {
         type: "Operator",
         operator: "=",
-        left: xvar,
+        left: x,
         right: newRight,
-      } as OperatorNode;
+      };
     }
+
     return null;
   }
 

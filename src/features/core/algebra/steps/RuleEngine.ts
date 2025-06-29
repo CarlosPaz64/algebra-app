@@ -21,13 +21,13 @@ export class EquationRuleEngine {
   constructor(private rules: Rule[]) {}
 
   solve(initialAst: ASTNode): RuleStep[] {
-    // 1) Validar AST inicial
     if (!isOperatorNode(initialAst) || initialAst.operator !== "=") {
       throw new Error("El AST inicial debe ser un OperatorNode con operator '='");
     }
-    let current: OperatorNode = initialAst;
 
-    // 2) Paso 0: registrar la ecuación inicial
+    let current: OperatorNode = initialAst;
+    console.log("🟡 AST inicial:", JSON.stringify(current, null, 2));
+
     const steps: RuleStep[] = [{
       stepNumber: 0,
       description: "Ecuación inicial",
@@ -36,10 +36,12 @@ export class EquationRuleEngine {
     }];
     this.seen.add(JSON.stringify(current));
 
-    // 3) Bucle principal
     while (this.stepCount < this.MAX_STEPS) {
-      // 3a) ¿Está resuelta?
+      console.log(`\n🔁 Paso ${this.stepCount} - AST actual:`);
+      console.log(JSON.stringify(current, null, 2));
+
       if (isSolved(current)) {
+        console.log("✅ La ecuación está resuelta.");
         this.stepCount++;
         steps.push({
           stepNumber: this.stepCount,
@@ -52,24 +54,31 @@ export class EquationRuleEngine {
 
       let applied = false;
 
-      // 3b) Probar cada regla sobre el nodo raíz
       for (const rule of this.rules) {
-        const nextAst = rule.apply(current);
-        if (!nextAst) continue;
+        console.log(`🔍 Probando regla: ${rule.name}`);
 
-        // 3c) Asegurarnos de que sigue siendo OperatorNode
+        const nextAst = rule.apply(current);
+
+        if (!nextAst) {
+          console.log(`⛔ La regla ${rule.name} no se aplicó.`);
+          continue;
+        }
+
         if (!isOperatorNode(nextAst)) {
-          console.warn(`La regla ${rule.name} devolvió un AST no-Operator; se ignora.`);
+          console.warn(`⚠️ La regla ${rule.name} devolvió un AST no-Operator; se ignora.`);
           continue;
         }
 
         const hash = JSON.stringify(nextAst);
         if (this.seen.has(hash)) {
-          console.warn("⚠️ Ciclo detectado. Deteniendo engine.");
+          console.warn("⚠️ Ciclo detectado con el siguiente AST. Deteniendo engine.");
+          console.log("AST repetido:", JSON.stringify(nextAst, null, 2));
           return steps;
         }
 
-        // 3d) Registrar paso
+        console.log(`✅ Regla aplicada: ${rule.name}`);
+        console.log("🆕 Nuevo AST:", JSON.stringify(nextAst, null, 2));
+
         this.seen.add(hash);
         this.stepCount++;
         steps.push({
@@ -84,17 +93,21 @@ export class EquationRuleEngine {
         break;
       }
 
-      // 3e) Si no se aplicó ninguna regla, salir
       if (!applied) {
-        console.warn("❌ No hay más reglas aplicables.");
+        console.warn("❌ No hay más reglas aplicables en este paso.");
         break;
       }
     }
 
-    // 4) Límite de pasos
     if (this.stepCount >= this.MAX_STEPS) {
       console.warn("⛔ Límite de pasos alcanzado.");
     }
+
+    console.log("\n🧾 PASOS COMPLETOS:");
+    steps.forEach(step => {
+      console.log(`Paso ${step.stepNumber}: ${step.description}`);
+      console.log(`→ ${step.latex}`);
+    });
 
     return steps;
   }

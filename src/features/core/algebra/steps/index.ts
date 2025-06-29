@@ -9,6 +9,12 @@ import {
   LiteralNode,
 } from "../../types/AST";
 
+/** Redondea x a `decimals` decimales */
+function roundTo(x: number, decimals: number): number {
+  const factor = Math.pow(10, decimals);
+  return Math.round(x * factor) / factor;
+}
+
 /** Busca una raíz de f en [a,b] con bisección */
 function bisection(
   f: (x: number) => number,
@@ -17,23 +23,14 @@ function bisection(
   tol: number = 1e-7,
   maxIter: number = 100
 ): number {
-  let fa = f(a),
-      fb = f(b);
-  if (fa * fb > 0) {
-    throw new Error("Bisección: f(a) y f(b) sin signo distinto");
-  }
-  let mid = a;
+  let fa = f(a), fb = f(b), mid = a;
+  if (fa * fb > 0) throw new Error("Bisección: f(a) y f(b) sin signo distinto");
   for (let i = 0; i < maxIter; i++) {
     mid = (a + b) / 2;
     const fm = f(mid);
     if (Math.abs(fm) < tol) return mid;
-    if (fa * fm < 0) {
-      b = mid;
-      fb = fm;
-    } else {
-      a = mid;
-      fa = fm;
-    }
+    if (fa * fm < 0) { b = mid; fb = fm; }
+    else          { a = mid; fa = fm; }
   }
   return mid;
 }
@@ -47,10 +44,9 @@ export function solveExpression(expr: string): RuleStep[] {
 
   // Paso 0: inicial
   const initialAst: OperatorNode = {
-    type: "Operator",
-    operator: "=",
-    left:  { type: "Variable", name: lhs },
-    right: { type: "Variable", name: rhs } as any,
+    type: "Operator", operator: "=", 
+    left: { type: "Variable", name: lhs },
+    right:{ type: "Variable", name: rhs } as any,
   };
   const steps: RuleStep[] = [{
     stepNumber: 0,
@@ -61,33 +57,37 @@ export function solveExpression(expr: string): RuleStep[] {
 
   const variable = (lhs.match(/[a-zA-Z]+/) ?? ["x"])[0];
 
-  // 1) Intento simbólico con Nerdamer
+  // 1) Intento simbólico
   let solutions: string[] = [];
   try {
     const raw = (nerdamer as any).solve(full, variable);
     const rawStr = raw?.toString?.() ?? "";
-    solutions = rawStr
-      ? rawStr.split(",").map((s: string) => s.trim()).filter(Boolean)
-      : [];
+    if (rawStr) {
+      solutions = rawStr
+  ? rawStr
+      .split(",")
+      .map((s: string) => s.trim())
+      .filter((s: string) => Boolean(s))
+  : [];
+
+    }
   } catch {
     // pasa al numérico
   }
 
-  // 2) Fallback numérico con bisección
+  // 2) Fallback numérico con bisección + redondeo
   if (solutions.length === 0) {
-    // f(x) = lhs - rhs
     const f = (x: number) => {
       const scope = { [variable]: x };
       return (evaluate(lhs, scope) as number) - (evaluate(rhs, scope) as number);
     };
 
-    // busca en varios intervalos posibles
     const intervals = [
       [-10, 10],
       [0, 10],
       [-10, 0],
       [0, Math.PI],
-      [Math.PI / 2, Math.PI * 2]
+      [Math.PI / 2, Math.PI * 2],
     ];
     let root: number | null = null;
     for (const [a, b] of intervals) {
@@ -101,7 +101,10 @@ export function solveExpression(expr: string): RuleStep[] {
     if (root === null) {
       throw new Error("No se pudo resolver la ecuación ni simbólica ni numéricamente");
     }
-    solutions = [root.toString()];
+
+    // Redondeamos a 6 decimales y eliminamos ceros sobrantes
+    const rounded = roundTo(root, 6);
+    solutions = [parseFloat(rounded.toString()).toString()];
   }
 
   // 3) Construir paso resuelto
@@ -113,9 +116,8 @@ export function solveExpression(expr: string): RuleStep[] {
       : ({ type: "Variable", name: sol } as VariableNode);
 
     const solved: OperatorNode = {
-      type: "Operator",
-      operator: "=",
-      left:  { type: "Variable", name: variable },
+      type: "Operator", operator: "=", 
+      left: { type: "Variable", name: variable },
       right: rightAst,
     };
     steps.push({

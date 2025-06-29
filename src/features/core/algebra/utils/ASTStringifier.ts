@@ -1,4 +1,14 @@
-import { ASTNode } from "../../types/AST";
+import { ASTNode, OperatorNode, GroupingNode } from "../../types/AST";
+
+function precedence(op: string): number {
+  switch (op) {
+    case "^": return 4;
+    case "*": case "/": return 3;
+    case "+": case "-": return 2;
+    case "=":           return 1;
+    default:            return 0;
+  }
+}
 
 export function astToString(ast: ASTNode): string {
   switch (ast.type) {
@@ -6,16 +16,34 @@ export function astToString(ast: ASTNode): string {
       return ast.value.toString();
     case "Variable":
       return ast.name;
-    case "Operator":
-      const L = astToString(ast.left);
-      const R = astToString(ast.right);
-      return ast.operator === "^"
-        ? `(${L})^(${R})`
-        : `(${L}${ast.operator}${R})`;
     case "Function":
-      const args = ast.args.map(astToString).join(",");
-      return `${ast.name}(${args})`;
+      return `${ast.name}(${ast.args.map(astToString).join(",")})`;
     case "Grouping":
+      // se asume que aquí ya es necesario el paréntesis
       return `(${astToString(ast.expression)})`;
+
+    case "Operator":
+      const node = ast as OperatorNode;
+      const op = node.operator;
+
+      const leftStr  = astToString(node.left);
+      const rightStr = astToString(node.right);
+
+      const wrap = (child: ASTNode, str: string) => {
+        if (child.type === "Operator") {
+          const precChild = precedence((child as OperatorNode).operator);
+          const precThis  = precedence(op);
+          // solo envolvemos si el hijo tiene menor precedencia
+          if (precChild < precThis) return `(${str})`;
+        }
+        return str;
+      };
+
+      // para ^ querrás “a^(b)”; los demás ops van sin agrupación extra si no hace falta
+      if (op === "^") {
+        return `${wrap(node.left, leftStr)}^${wrap(node.right, rightStr)}`;
+      } else {
+        return `${wrap(node.left, leftStr)}${op}${wrap(node.right, rightStr)}`;
+      }
   }
 }
