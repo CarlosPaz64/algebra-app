@@ -1,9 +1,9 @@
 import { EquationContract } from "../contracts/EquationContract";
 
 export class DeleteEquationUseCase {
-    constructor(private repository: EquationContract){}
+  constructor(private repository: EquationContract) {}
 
-    async(id: string): Promise<void> {
-        return this.repository.deleteEquation(id);
-    }
+  async execute(id: string): Promise<void> {
+    return this.repository.deleteEquation(id);
+  }
 }
