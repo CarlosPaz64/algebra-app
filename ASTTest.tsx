@@ -9,7 +9,7 @@ import {
 import { solveExpression }    from "./src/features/core/algebra/steps";
 import { solveStepByStep } from "./src/features/core/algebra/rules/StepByStepRules";
 import { RuleStep }           from "./src/features/core/types/RuleStep";
-import { MathRenderer }       from "./MathRender";
+import { MathRenderer }       from "./src/shared/components/atoms/MathRender";
 
 export const DebugEquationSolver = () => {
   const [input, setInput] = useState("2*x + 3 = 7");

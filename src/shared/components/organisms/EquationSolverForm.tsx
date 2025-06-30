@@ -1,13 +1,13 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Button, StyleSheet, ScrollView } from "react-native";
-import { solveStepByStep } from "../../../core/algebra/rules/StepByStepRules";
-import { Equation } from "../../domain/entities/Equation";
-import { MathRenderer } from "../../../../shared/components/atoms/MathRender";
+import { View, TextInput, Button, StyleSheet, Text } from "react-native";
+import { solveStepByStep } from "../../../features/core/algebra/rules/StepByStepRules";
+import { MathRenderer } from "../../../shared/components/atoms/MathRender";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../../../../navigation/RootNavigation";
+import { RootStackParamList } from "../../../navigation/RootNavigation";
+import { Equation } from "../../../features/solver/domain/entities/Equation";
 
-export default function HomeScreen() {
+export const EquationSolverForm = () => {
   const [input, setInput] = useState("2*x + 3 = 7");
   const [latex, setLatex] = useState("");
   const [equation, setEquation] = useState<Equation | null>(null);
@@ -18,7 +18,7 @@ export default function HomeScreen() {
       const steps = solveStepByStep(input);
       const finalStep = steps[steps.length - 1];
 
-      const newEquation: Equation = {
+      const newEq: Equation = {
         id: Date.now().toString(),
         rawInput: input,
         parsed: finalStep.ast,
@@ -27,7 +27,7 @@ export default function HomeScreen() {
         createdAt: new Date().toISOString(),
       };
 
-      setEquation(newEquation);
+      setEquation(newEq);
       setLatex(finalStep.latex);
     } catch (e) {
       console.error(e);
@@ -35,8 +35,8 @@ export default function HomeScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Resolver ecuación</Text>
+    <View style={styles.container}>
+      <Text style={styles.title}>Resolver Ecuación</Text>
       <TextInput
         style={styles.input}
         value={input}
@@ -44,19 +44,19 @@ export default function HomeScreen() {
         placeholder="Ej: 2*x + 3 = 7"
       />
       <Button title="Resolver" onPress={handleSolve} />
-      {latex && equation ? (
+      {latex && equation && (
         <View style={styles.result}>
           <Text>Resultado:</Text>
           <MathRenderer expression={latex} />
           <Button
             title="Mostrar pasos"
-            onPress={() => navigation.navigate("StepByStep", { equation })}
+            onPress={() => navigation.navigate("StepByStep", { equation: equation })}
           />
         </View>
-      ) : null}
-    </ScrollView>
+      )}
+    </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: { padding: 16 },

@@ -1,11 +1,11 @@
 import { create } from 'zustand';
-import { Equation } from '../domain/entities/Equation';
-import { GetEquationsUseCase } from '../domain/usecases/GetEquationsUseCase';
-import { SaveEquationUseCase } from '../domain/usecases/SaveEquationUseCase';
-import { DeleteEquationUseCase } from '../domain/usecases/DeleteEquationUseCase';
-import { ClearAllEquationsUseCase } from '../domain/usecases/ClearAllEquationsUseCase';
-import { EquationStorageRepository } from '../infrastructure/repositories/EquationStorageRepository';
-import { GetEquationById } from '../domain/usecases/GetEquationByIdUseCase';
+import { Equation } from '../../domain/entities/Equation';
+import { GetEquationsUseCase } from '../../domain/usecases/GetEquationsUseCase';
+import { SaveEquationUseCase } from '../../domain/usecases/SaveEquationUseCase';
+import { DeleteEquationUseCase } from '../../domain/usecases/DeleteEquationUseCase';
+import { ClearAllEquationsUseCase } from '../../domain/usecases/ClearAllEquationsUseCase';
+import { EquationStorageRepository } from '../../infrastructure/repositories/EquationStorageRepository';
+import { GetEquationById } from '../../domain/usecases/GetEquationByIdUseCase';
 
 const repository = new EquationStorageRepository();
 
