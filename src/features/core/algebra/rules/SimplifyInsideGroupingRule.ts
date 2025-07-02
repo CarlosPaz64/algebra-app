@@ -3,52 +3,73 @@ import {
   ASTNode,
   OperatorNode,
   LiteralNode,
+  GroupingNode,
 } from "../../types/AST";
 
-/**
- * Si detecta x·(A + B) = C con A y B literales,
- * convierte A + B en un Literal antes de dividir.
- */
 export class SimplifyInsideGroupingRule implements Rule {
-  name = "SimplifyInsideGroupingRule";
+  name = "Simplificar constantes dentro del paréntesis";
 
   apply(ast: ASTNode): ASTNode | null {
-    if (ast.type !== "Operator") return null;
+    if (ast.type !== "Operator" || ast.operator !== "=") return null;
     const eq = ast as OperatorNode;
 
-    // Solo miramos el lado donde esté la multiplicación x·(...)
-    if (
-      eq.left.type === "Operator" &&
-      eq.left.operator === "*" &&
-      eq.left.right.type === "Operator" &&
-      eq.left.right.operator === "+" &&
-      eq.left.right.left.type === "Literal" &&
-      eq.left.right.right.type === "Literal"
-    ) {
-      const sum =
-        (eq.left.right.left as LiteralNode).value +
-        (eq.left.right.right as LiteralNode).value;
+    const simplify = (side: "left" | "right"): ASTNode | null => {
+      const node = eq[side];
 
-      // Construimos x·sum
-      const newLeft: OperatorNode = {
-        type: "Operator",
-        operator: "*",
-        left: eq.left.left,
-        right: { type: "Literal", value: sum },
-      };
+      // Buscamos x * (a op b)
+      if (
+        node.type === "Operator" &&
+        node.operator === "*" &&
+        node.right.type === "Grouping" &&
+        node.right.expression.type === "Operator" &&
+        node.right.expression.left.type === "Literal" &&
+        node.right.expression.right.type === "Literal"
+      ) {
+        const opNode = node.right.expression;
+        const a = (opNode.left as LiteralNode).value;
+        const b = (opNode.right as LiteralNode).value;
 
-      return {
-        type: "Operator",
-        operator: "=",
-        left: newLeft,
-        right: eq.right,
-      } as OperatorNode;
-    }
+        let result: number;
+        switch (opNode.operator) {
+          case "+":
+            result = a + b;
+            break;
+          case "-":
+            result = a - b;
+            break;
+          case "*":
+            result = a * b;
+            break;
+          case "/":
+            result = a / b;
+            break;
+          default:
+            return null;
+        }
 
-    return null;
+        const newLeft: OperatorNode = {
+          type: "Operator",
+          operator: "*",
+          left: node.left,
+          right: {
+            type: "Literal",
+            value: result,
+          },
+        };
+
+        return {
+          ...eq,
+          [side]: newLeft,
+        } as OperatorNode;
+      }
+
+      return null;
+    };
+
+    return simplify("left") || simplify("right");
   }
 
   description(): string {
-    return "Simplificar la suma dentro del paréntesis";
+    return "Simplificar operación dentro de paréntesis: x * (a op b)";
   }
-} 
+}

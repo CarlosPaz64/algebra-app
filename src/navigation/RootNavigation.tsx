@@ -38,7 +38,7 @@ const TabNavigator = () => (
       },
     })}
   >
-    <Tabs.Screen name="Home" component={HomeScreen} options={{ title: "Calcula tu ecuación" }}/>
+    <Tabs.Screen name="Home" component={HomeScreen} options={{ title: "Resuelve tu ecuación" }}/>
     <Tabs.Screen name="History" component={HistoryScreen} options={{ title: "Historial" }}/>
   </Tabs.Navigator>
 );
@@ -48,7 +48,7 @@ export default function RootNavigator() {
     <NavigationContainer>
       <Stack.Navigator>
         <Stack.Screen name="Tabs" component={TabNavigator} options={{ headerShown: false }} />
-        <Stack.Screen name="StepByStep" component={StepByStepScreen} />
+        <Stack.Screen name="StepByStep" component={StepByStepScreen} options={{ title: "Paso a paso" }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

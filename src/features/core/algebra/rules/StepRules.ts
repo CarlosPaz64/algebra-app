@@ -12,12 +12,26 @@ import { InverseFunctionRule }           from "../rules/InverseFunctionRule";
 import { DivideCoefficientRule }         from "../rules/DivideCoefficientRule";
 import { SolvePolynomialRule }           from "../rules/SolvePolynomialRule";
 import { IsolateVariableOnLeftRule } from "./IsolateVariableOnLeftRule";
+import { MultiplyByReciprocalRule } from "./MultiplyByReciprocalRule";
+import { DivideBothSidesRule } from "./DivideBothSidesRule";
+import { SimplifyDivisionOfFractionsRule } from "./SimplifyDivisionOfFractionsRule";
+import { EvaluateFractionRule } from "./EvaluateFractionRule";
+import { EvaluateGroupedConstantsRule } from "./EvaluateGroupedConstantsRule";
+import { EvaluateBinaryNumericExpressionRule } from "./EvaluateBinaryNumericExpressionRule";
+import { MultiplyBothSidesRule } from "./MultiplyBothSidesRule";
 
 export const stepRules = [
   new IsolateVariableOnLeftRule(),
+  new MultiplyByReciprocalRule(),
+  new MultiplyBothSidesRule(),
+  new DivideBothSidesRule(),
+  new SimplifyDivisionOfFractionsRule(),
+  new EvaluateFractionRule(),
   new NormalizeSubtractionRule(),     // 1) Unificar restas
   new ExpandPowerRule(),              // 2) Expandir potencias
   new ClearDenominatorRule(),         // 3) Quitar fracciones
+  new EvaluateGroupedConstantsRule(),
+  new EvaluateBinaryNumericExpressionRule(),
   new SimplifyConstantsRule(),        // 5) Simplificar  números
   new CombineLikeTermsRule(),         // 6) Combinar semejantes
   new DistributiveInverseRule(),      // 7) Distributiva inversa

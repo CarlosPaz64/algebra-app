@@ -57,40 +57,36 @@ export class EquationRuleEngine {
       for (const rule of this.rules) {
         console.log(`🔍 Probando regla: ${rule.name}`);
 
-        const nextAst = rule.apply(current);
+        let nextAst = rule.apply(current);
 
-        if (!nextAst) {
-          console.log(`⛔ La regla ${rule.name} no se aplicó.`);
-          continue;
+        // Aplica la misma regla múltiples veces si sigue transformando el AST
+        while (
+          nextAst &&
+          isOperatorNode(nextAst) &&
+          !this.seen.has(JSON.stringify(nextAst))
+        ) {
+          console.log(`✅ Regla aplicada: ${rule.name}`);
+          console.log("🆕 Nuevo AST:", JSON.stringify(nextAst, null, 2));
+
+          const hash = JSON.stringify(nextAst);
+          this.seen.add(hash);
+          this.stepCount++;
+
+          steps.push({
+            stepNumber: this.stepCount,
+            description: rule.description(current),
+            ast: nextAst,
+            latex: ASTToLatex(nextAst),
+          });
+
+          current = nextAst;
+          applied = true;
+
+          // Intenta aplicar nuevamente la misma regla
+          nextAst = rule.apply(current);
         }
 
-        if (!isOperatorNode(nextAst)) {
-          console.warn(`⚠️ La regla ${rule.name} devolvió un AST no-Operator; se ignora.`);
-          continue;
-        }
-
-        const hash = JSON.stringify(nextAst);
-        if (this.seen.has(hash)) {
-          console.warn("⚠️ Ciclo detectado con el siguiente AST. Deteniendo engine.");
-          console.log("AST repetido:", JSON.stringify(nextAst, null, 2));
-          return steps;
-        }
-
-        console.log(`✅ Regla aplicada: ${rule.name}`);
-        console.log("🆕 Nuevo AST:", JSON.stringify(nextAst, null, 2));
-
-        this.seen.add(hash);
-        this.stepCount++;
-        steps.push({
-          stepNumber: this.stepCount,
-          description: rule.description(current),
-          ast: nextAst,
-          latex: ASTToLatex(nextAst),
-        });
-
-        current = nextAst;
-        applied = true;
-        break;
+        if (applied) break; // pasa a siguiente paso si hubo alguna transformación
       }
 
       if (!applied) {

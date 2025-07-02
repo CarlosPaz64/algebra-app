@@ -1,10 +1,9 @@
 import { Rule } from "../steps/Rule";
-import { ASTNode, OperatorNode, VariableNode } from "../../types/AST";
+import { ASTNode, OperatorNode } from "../../types/AST";
 
 /**
- * Si ve (num/den) = C  ⇒  num = C·den
- * También: C = (num/den) ⇒ num = C·den
- * ❗ No se aplica si la variable ya está aislada (ej: x = 4/2)
+ * Si ve: x = (a / b) ⇒ x * b = a
+ * ❗ Solo se aplica si la variable está en el lado izquierdo.
  */
 export class ClearDenominatorRule implements Rule {
   name = "ClearDenominatorRule";
@@ -14,7 +13,7 @@ export class ClearDenominatorRule implements Rule {
 
     const eq = ast as OperatorNode;
 
-    // ✋ No aplicar si ya está en forma x = (a / b)
+    // Solo aplicar si variable está a la izquierda
     if (
       eq.left.type === "Variable" &&
       eq.right.type === "Operator" &&
@@ -22,32 +21,18 @@ export class ClearDenominatorRule implements Rule {
       eq.right.left.type === "Literal" &&
       eq.right.right.type === "Literal"
     ) {
-      return null;
-    }
-
-    const trySide = (side: "left" | "right", other: "left" | "right"): ASTNode | null => {
-      const node = eq[side];
-      if (node.type === "Operator" && node.operator === "/") {
-        return {
+      return {
+        type: "Operator",
+        operator: "=",
+        left: {
           type: "Operator",
-          operator: "=",
-          left: node.left,
-          right: {
-            type: "Operator",
-            operator: "*",
-            left: eq[other],
-            right: node.right,
-          }
-        };
-      }
-      return null;
-    };
-
-    const l = trySide("left", "right");
-    if (l) return l;
-
-    const r = trySide("right", "left");
-    if (r) return r;
+          operator: "*",
+          left: eq.left,
+          right: eq.right.right
+        },
+        right: eq.right.left
+      };
+    }
 
     return null;
   }

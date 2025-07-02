@@ -13,30 +13,35 @@ export default function HomeScreen() {
   const [equation, setEquation] = useState<Equation | null>(null);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  const handleSolve = () => {
-    try {
-      const steps = solveStepByStep(input);
-      const finalStep = steps[steps.length - 1];
+const cleanInput = (str: string) =>
+  str.replace(/[\u200B-\u200D\uFEFF]/g, "").trim(); // limpia caracteres invisibles
 
-      const newEquation: Equation = {
-        id: Date.now().toString(),
-        rawInput: input,
-        parsed: finalStep.ast,
-        steps,
-        solved: true,
-        createdAt: new Date().toISOString(),
-      };
+const handleSolve = () => {
+  try {
+    const sanitized = cleanInput(input);
+    const steps = solveStepByStep(sanitized); // usa string limpio
+    const finalStep = steps[steps.length - 1];
 
-      setEquation(newEquation);
-      setLatex(finalStep.latex);
-    } catch (e) {
-      console.error(e);
-    }
-  };
+    const newEquation: Equation = {
+      id: Date.now().toString(),
+      rawInput: sanitized,
+      parsed: finalStep.ast,
+      steps,
+      solved: true,
+      createdAt: new Date().toISOString(),
+    };
+
+    setEquation(newEquation);
+    setLatex(finalStep.latex);
+  } catch (e) {
+    console.error("❌ Error al resolver:", e);
+  }
+};
+
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Resolver ecuación</Text>
+      <Text style={styles.title}>Ingresa la ecuación a resolver:</Text>
       <TextInput
         style={styles.input}
         value={input}

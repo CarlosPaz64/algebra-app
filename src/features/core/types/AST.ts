@@ -22,7 +22,7 @@ export interface OperatorNode {
 
 export interface FunctionNode {
     type: "Function";
-    name: "sqrt" | "log" | "sin" | "cos" | "tan" | "abs" | "max" | "min" | "factorial" | "nthRoot" | "ln";
+    name: string;
     args: ASTNode[];
 }
 
