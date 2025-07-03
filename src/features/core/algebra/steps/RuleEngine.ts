@@ -50,6 +50,44 @@ export class EquationRuleEngine {
       return steps;
     }
 
+    // 🚫 Chequeo especial: Contradicciones tipo ax = ax + c (c ≠ 0)
+    if (
+      current.left.type === "Operator" &&
+      current.left.operator === "*" &&
+      current.left.left.type === "Literal" &&
+      current.left.right.type === "Variable" &&
+      current.right.type === "Operator" &&
+      (current.right.operator === "+" || current.right.operator === "-") &&
+      current.right.left.type === "Operator" &&
+      current.right.left.operator === "*" &&
+      current.right.left.left.type === "Literal" &&
+      current.right.left.right.type === "Variable" &&
+      current.right.right.type === "Literal"
+    ) {
+      const leftCoeff = current.left.left.value;
+      const leftVar = current.left.right.name;
+      const rightCoeff = current.right.left.left.value;
+      const rightVar = current.right.left.right.name;
+      const offset = current.right.right.value;
+
+      const sameTerms = leftCoeff === rightCoeff && leftVar === rightVar;
+      const nonZeroOffset = offset !== 0;
+
+      if (sameTerms && nonZeroOffset) {
+        console.log("🚫 Contradicción detectada: ax = ax ± c");
+
+        steps.push({
+          stepNumber: 1,
+          description: "La ecuación es una contradicción: no tiene solución.",
+          ast: current,
+          latex: ASTToLatex(current),
+        });
+
+        return steps;
+      }
+    }
+
+
 
     while (this.stepCount < this.MAX_STEPS) {
       console.log(`\n🔁 Paso ${this.stepCount} - AST actual:`);
