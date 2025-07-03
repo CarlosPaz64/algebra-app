@@ -2,8 +2,9 @@ import { Rule } from "../steps/Rule";
 import { ASTNode, OperatorNode } from "../../types/AST";
 
 /**
- * Si ve: x = (a / b) ⇒ x * b = a
- * ❗ Solo se aplica si la variable está en el lado izquierdo.
+ * Si ve una fracción con denominador literal, multiplica ambos lados para eliminarla:
+ * - Caso A: x = (a / b)    ⇒    x * b = a
+ * - Caso B: (A) / b = C    ⇒    A = C * b
  */
 export class ClearDenominatorRule implements Rule {
   name = "ClearDenominatorRule";
@@ -13,7 +14,7 @@ export class ClearDenominatorRule implements Rule {
 
     const eq = ast as OperatorNode;
 
-    // Solo aplicar si variable está a la izquierda
+    // ✅ CASO A: x = a / b ⇒ x * b = a
     if (
       eq.left.type === "Variable" &&
       eq.right.type === "Operator" &&
@@ -28,9 +29,28 @@ export class ClearDenominatorRule implements Rule {
           type: "Operator",
           operator: "*",
           left: eq.left,
-          right: eq.right.right
+          right: eq.right.right,
         },
-        right: eq.right.left
+        right: eq.right.left,
+      };
+    }
+
+    // ✅ CASO B: (A) / b = C ⇒ A = C * b
+    if (
+      eq.left.type === "Operator" &&
+      eq.left.operator === "/" &&
+      eq.left.right.type === "Literal"
+    ) {
+      return {
+        type: "Operator",
+        operator: "=",
+        left: eq.left.left,
+        right: {
+          type: "Operator",
+          operator: "*",
+          left: eq.right,
+          right: eq.left.right,
+        },
       };
     }
 

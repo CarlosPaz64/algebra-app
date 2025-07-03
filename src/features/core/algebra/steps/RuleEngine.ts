@@ -18,7 +18,7 @@ export class EquationRuleEngine {
   private stepCount = 0;
   private readonly MAX_STEPS = 30;
 
-  constructor(private rules: Rule[]) {}
+  constructor(private rules: Rule[]) { }
 
   solve(initialAst: ASTNode): RuleStep[] {
     if (!isOperatorNode(initialAst) || initialAst.operator !== "=") {
@@ -35,6 +35,21 @@ export class EquationRuleEngine {
       latex: ASTToLatex(current),
     }];
     this.seen.add(JSON.stringify(current));
+
+    // 🟢 Chequeo especial: Identidad como x = x o 2x + 3 = 2x + 3
+    if (JSON.stringify(current.left) === JSON.stringify(current.right)) {
+      console.log("♾️ Ecuación identidad detectada.");
+
+      steps.push({
+        stepNumber: 1,
+        description: "La ecuación es una identidad (se cumple para todo valor de la variable).",
+        ast: current,
+        latex: ASTToLatex(current),
+      });
+
+      return steps;
+    }
+
 
     while (this.stepCount < this.MAX_STEPS) {
       console.log(`\n🔁 Paso ${this.stepCount} - AST actual:`);

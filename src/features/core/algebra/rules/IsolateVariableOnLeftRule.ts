@@ -1,9 +1,14 @@
 import { Rule } from "../steps/Rule";
-import { ASTNode, OperatorNode } from "../../types/AST";
+import {
+  ASTNode,
+  OperatorNode,
+  LiteralNode,
+  VariableNode
+} from "../../types/AST";
 
 /**
- * Transforma: (A + b) = C  ⇒  A = C - b
- * Solo si A contiene la variable y b no.
+ * Mueve constantes del lado izquierdo restando o sumando.
+ * Soporta: 2*x + 3 = 7  o  3 + 2*x = 7  o  2*x - 3 = 7
  */
 export class IsolateVariableOnLeftRule implements Rule {
   name = "IsolateVariableOnLeftRule";
@@ -12,22 +17,57 @@ export class IsolateVariableOnLeftRule implements Rule {
     if (ast.type !== "Operator" || ast.operator !== "=") return null;
     const eq = ast as OperatorNode;
 
-    if (
-      eq.left.type === "Operator" &&
-      eq.left.operator === "+" &&
-      eq.left.left.type === "Operator" &&
-      eq.left.right.type === "Literal"
-    ) {
-      // A + b = C  →  A = C - b
+    const left = eq.left;
+    if (left.type !== "Operator") return null;
+
+    const isLiteral = (n: ASTNode): n is LiteralNode => n.type === "Literal";
+    const isVarTerm = (n: ASTNode) =>
+      n.type === "Variable" ||
+      (n.type === "Operator" && n.operator === "*" && n.right.type === "Variable");
+
+    const { operator, left: A, right: B } = left;
+
+    // A + B = C  donde A es término con variable
+    if (operator === "+" && isVarTerm(A) && isLiteral(B)) {
       return {
         type: "Operator",
         operator: "=",
-        left: eq.left.left,
+        left: A,
         right: {
           type: "Operator",
           operator: "-",
           left: eq.right,
-          right: eq.left.right,
+          right: B
+        }
+      };
+    }
+
+    // B + A = C  donde A es término con variable
+    if (operator === "+" && isVarTerm(B) && isLiteral(A)) {
+      return {
+        type: "Operator",
+        operator: "=",
+        left: B,
+        right: {
+          type: "Operator",
+          operator: "-",
+          left: eq.right,
+          right: A
+        }
+      };
+    }
+
+    // A - B = C  donde A es término con variable
+    if (operator === "-" && isVarTerm(A) && isLiteral(B)) {
+      return {
+        type: "Operator",
+        operator: "=",
+        left: A,
+        right: {
+          type: "Operator",
+          operator: "+",
+          left: eq.right,
+          right: B
         }
       };
     }
@@ -36,6 +76,6 @@ export class IsolateVariableOnLeftRule implements Rule {
   }
 
   description(): string {
-    return "Mover constantes al otro lado restando";
+    return "Mover constantes al otro lado restando o sumando";
   }
 }

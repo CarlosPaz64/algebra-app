@@ -19,12 +19,14 @@ import { EvaluateFractionRule } from "./EvaluateFractionRule";
 import { EvaluateGroupedConstantsRule } from "./EvaluateGroupedConstantsRule";
 import { EvaluateBinaryNumericExpressionRule } from "./EvaluateBinaryNumericExpressionRule";
 import { MultiplyBothSidesRule } from "./MultiplyBothSidesRule";
+import { DistributeMultiplicationOverAdditionRule } from "./DistributeMultiplicationOverAdditionRule";
 
 export const stepRules = [
   new IsolateVariableOnLeftRule(),
   new MultiplyByReciprocalRule(),
   new MultiplyBothSidesRule(),
   new DivideBothSidesRule(),
+  new DistributeMultiplicationOverAdditionRule(),
   new SimplifyDivisionOfFractionsRule(),
   new EvaluateFractionRule(),
   new NormalizeSubtractionRule(),     // 1) Unificar restas
