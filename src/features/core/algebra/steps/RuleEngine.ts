@@ -75,13 +75,15 @@ export class EquationRuleEngine {
         console.log(`🔍 Probando regla: ${rule.name}`);
         const result = rule.apply(current);
 
-        // Resultado con múltiples ramas (± por ejemplo)
+        // Múltiples ramas (±)
         if (Array.isArray(result)) {
           console.log(`✅ Regla aplicada (varias ramas): ${rule.name}`);
           for (const branch of result) {
             const branchHash = JSON.stringify(branch);
             if (this.seen.has(branchHash)) {
-              console.warn("🔁 Rama repetida detectada:", branchHash);
+              if (rule.name === "SplitPlusMinusRule") {
+                console.warn("🔁 Rama repetida detectada:", branchHash);
+              }
               continue;
             }
 
@@ -103,11 +105,13 @@ export class EquationRuleEngine {
           return steps;
         }
 
-        // Resultado con un solo AST
+        // Resultado único
         if (result && isOperatorNode(result)) {
           const resultHash = JSON.stringify(result);
           if (this.seen.has(resultHash)) {
-            console.warn("🔁 Resultado ya visto, se evita ciclo:", resultHash);
+            if (rule.name === "QuadraticFormulaRule" || rule.name === "SplitPlusMinusRule") {
+              console.warn("🔁 Resultado ya visto, se evita ciclo:", resultHash);
+            }
             continue;
           }
 
