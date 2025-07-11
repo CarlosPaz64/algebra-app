@@ -6,9 +6,32 @@ function isZeroLiteral(n: ASTNode): n is LiteralNode {
   return n.type === "Literal" && n.value === 0;
 }
 
+// 🔧 Extrae todos los términos de una suma/resta como lista lineal (mejorada)
+function extractTermsFromSum(node: ASTNode): ASTNode[] {
+  if (node.type === "Operator") {
+    if (node.operator === "+") {
+      return [
+        ...extractTermsFromSum(node.left),
+        ...extractTermsFromSum(node.right),
+      ];
+    } else if (node.operator === "-") {
+      return [
+        ...extractTermsFromSum(node.left),
+        {
+          type: "Operator",
+          operator: "*",
+          left: { type: "Literal", value: -1 },
+          right: node.right,
+        } as OperatorNode,
+      ];
+    }
+  }
+  return [node];
+}
+
 /**
- * Detecta ax^2 + bx + c = 0 y lo convierte en
- * x = (-b ± √(b²-4ac)) / (2a)
+ * Detecta ecuaciones cuadráticas de la forma ax^2 + bx + c = 0
+ * y aplica la fórmula general: x = (-b ± sqrt(b² - 4ac)) / (2a)
  */
 export class QuadraticFormulaRule implements Rule {
   name = "QuadraticFormulaRule";
@@ -16,48 +39,76 @@ export class QuadraticFormulaRule implements Rule {
   apply(ast: ASTNode): ASTNode | null {
     if (ast.type !== "Operator" || ast.operator !== "=") return null;
     const eq = ast as OperatorNode;
-    // sólo si RHS es 0
     if (!isZeroLiteral(eq.right)) return null;
 
-    // función auxiliar para extraer coeficientes (muy simplificada)
-    const flatten = (node: ASTNode): ASTNode[] => {
-      if (node.type === "Operator" && node.operator === "+")
-        return [...flatten(node.left), ...flatten(node.right)];
-      return [node];
-    };
-    const terms = flatten(eq.left);
-    let a=0, b=0, c=0;
+    const terms = extractTermsFromSum(eq.left);
+    let a = 0, b = 0, c = 0;
+
     for (const t of terms) {
+      // Detecta x^2
       if (
         t.type === "Operator" &&
+        t.operator === "^" &&
+        t.left.type === "Variable" &&
+        t.right.type === "Literal" &&
+        t.right.value === 2
+      ) {
+        a = 1;
+      }
+
+      // Detecta ax^2
+      else if (
+        t.type === "Operator" &&
         t.operator === "*" &&
-        t.left.type === "Literal" &&
         t.right.type === "Operator" &&
         t.right.operator === "^" &&
         t.right.left.type === "Variable" &&
         t.right.right.type === "Literal" &&
-        (t.right.right as LiteralNode).value === 2
+        t.right.right.value === 2 &&
+        t.left.type === "Literal"
       ) {
-        a = (t.left as LiteralNode).value;
-      } else if (
+        a = t.left.value;
+      }
+
+      // Detecta bx
+      else if (
         t.type === "Operator" &&
         t.operator === "*" &&
         t.left.type === "Literal" &&
         t.right.type === "Variable"
       ) {
-        b = (t.left as LiteralNode).value;
-      } else if (t.type === "Literal") {
-        c = t.value;
+        b += t.left.value;
+      }
+
+      // Detecta -bx
+      else if (
+        t.type === "Operator" &&
+        t.operator === "*" &&
+        t.left.type === "Literal" &&
+        t.left.value === -1 &&
+        t.right.type === "Operator" &&
+        t.right.operator === "*" &&
+        t.right.left.type === "Literal" &&
+        t.right.right.type === "Variable"
+      ) {
+        b += -1 * t.right.left.value;
+      }
+
+      // Detecta constante c
+      else if (t.type === "Literal") {
+        c += t.value;
       }
     }
+
     if (a === 0) return null;
 
-    // construimos el paso con la fórmula
-    const expr = `x = (-${b} + sqrt(${b}^2 - 4*${a}*${c}))/(2*${a})`;
+    console.log("🧮 Coeficientes detectados:\na =", a, "b =", b, "c =", c);
+
+    const expr = `x = (${b * -1} ± sqrt(${b}^2 - 4*${a}*${c})) / (2*${a})`;
     return stringToAST(expr) as OperatorNode;
   }
 
   description(): string {
-    return "Aplicar fórmula cuadrática";
+    return "Aplicar fórmula general cuadrática";
   }
 }

@@ -20,6 +20,10 @@ import { EvaluateGroupedConstantsRule } from "./EvaluateGroupedConstantsRule";
 import { EvaluateBinaryNumericExpressionRule } from "./EvaluateBinaryNumericExpressionRule";
 import { MultiplyBothSidesRule } from "./MultiplyBothSidesRule";
 import { DistributeMultiplicationOverAdditionRule } from "./DistributeMultiplicationOverAdditionRule";
+import { CombineNestedConstantsRule } from "./CombineNestedConstantsRule";
+import { EvaluateSqrtRule } from "./EvaluateSqrtRule";
+import { SplitPlusMinusRule } from "./SplitPlusMinusRule";
+import { EvaluatePlusMinusRule } from "./EvaluatePlusMinusRule";
 
 export const stepRules = [
   new IsolateVariableOnLeftRule(),
@@ -27,6 +31,7 @@ export const stepRules = [
   new MultiplyBothSidesRule(),
   new DivideBothSidesRule(),
   new DistributeMultiplicationOverAdditionRule(),
+  new CombineNestedConstantsRule(),
   new SimplifyDivisionOfFractionsRule(),
   new EvaluateFractionRule(),
   new NormalizeSubtractionRule(),     // 1) Unificar restas
@@ -40,9 +45,11 @@ export const stepRules = [
   new SimplifyInsideGroupingRule(),   // 8) Simplificar dentro de ()
   new ExtractRootRule(),              // 9) Extraer raíces
   new QuadraticFormulaRule(),         // 10) Fórmula cuadrática
+  new EvaluateSqrtRule(),
+  new SplitPlusMinusRule(),
   new FactorAndSolvePolynomialRule(), // 11) Polinomios ≥3
   new InverseFunctionRule(),          // 12) Funciones inversas
   new DivideCoefficientRule(),        // 13) Dividir coeficientes
-
+  new EvaluatePlusMinusRule(),
   new SolvePolynomialRule(),          // respaldo
 ];

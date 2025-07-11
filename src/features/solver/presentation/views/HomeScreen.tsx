@@ -19,7 +19,7 @@ const cleanInput = (str: string) =>
 const handleSolve = () => {
   try {
     const sanitized = cleanInput(input);
-    const steps = solveStepByStep(sanitized); // usa string limpio
+    const steps = solveStepByStep(sanitized);
     const finalStep = steps[steps.length - 1];
 
     const newEquation: Equation = {
@@ -32,11 +32,20 @@ const handleSolve = () => {
     };
 
     setEquation(newEquation);
-    setLatex(finalStep.latex);
+
+    // Si hay múltiples ramas, renderiza todas
+    if (Array.isArray(finalStep.ast)) {
+      const allLatex = finalStep.ast.map((branch: any) => branch.latex || "").join(" \\quad ");
+      setLatex(allLatex);
+    } else {
+      setLatex(finalStep.latex);
+    }
+
   } catch (e) {
     console.error("❌ Error al resolver:", e);
   }
 };
+
 
 
   return (

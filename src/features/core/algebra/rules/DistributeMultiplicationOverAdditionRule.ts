@@ -9,19 +9,19 @@ import { ASTNode, OperatorNode, LiteralNode } from "../../types/AST";
 export class DistributeMultiplicationOverAdditionRule implements Rule {
   name = "DistributeMultiplicationOverAdditionRule";
 
-  apply(ast: ASTNode): ASTNode | null {
-    if (ast.type !== "Operator" || ast.operator !== "=") return null;
-    const eq = ast as OperatorNode;
+apply(ast: ASTNode): ASTNode | null {
+  if (ast.type !== "Operator" || ast.operator !== "=") return null;
 
+  const tryDistribute = (node: ASTNode): ASTNode | null => {
     if (
-      eq.left.type === "Operator" &&
-      eq.left.operator === "*" &&
-      eq.left.left.type === "Literal" &&
-      eq.left.right.type === "Operator" &&
-      (eq.left.right.operator === "+" || eq.left.right.operator === "-")
+      node.type === "Operator" &&
+      node.operator === "*" &&
+      node.left.type === "Literal" &&
+      node.right.type === "Operator" &&
+      (node.right.operator === "+" || node.right.operator === "-")
     ) {
-      const a = eq.left.left as LiteralNode;
-      const op = eq.left.right as OperatorNode;
+      const a = node.left as LiteralNode;
+      const op = node.right as OperatorNode;
 
       const leftDistrib: ASTNode = {
         type: "Operator",
@@ -37,21 +37,39 @@ export class DistributeMultiplicationOverAdditionRule implements Rule {
         right: op.right,
       };
 
-      const distributed: ASTNode = {
+      return {
         type: "Operator",
         operator: op.operator,
         left: leftDistrib,
         right: rightDistrib,
       };
-
-      return {
-        ...eq,
-        left: distributed,
-      };
     }
-
     return null;
+  };
+
+  // Intenta aplicar distribución en hijos de eq.left
+  const newLeft =
+    ast.left.type === "Operator"
+      ? {
+          ...ast.left,
+          left: tryDistribute(ast.left.left) || ast.left.left,
+          right: tryDistribute(ast.left.right) || ast.left.right,
+        }
+      : ast.left;
+
+  // Aplica distribución si se puede en el nodo raíz izquierdo
+  const distributedLeft = tryDistribute(ast.left) || newLeft;
+
+  if (distributedLeft !== ast.left) {
+    return {
+      ...ast,
+      left: distributedLeft,
+    };
   }
+
+  return null;
+}
+
 
   description(): string {
     return "Distribuir multiplicación sobre suma o resta";

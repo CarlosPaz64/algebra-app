@@ -15,7 +15,7 @@ export interface VariableNode {
 
 export interface OperatorNode {
     type: "Operator";
-    operator: "+" | "-" | "*" | "/" | "^" | "=";
+    operator: "+" | "-" | "*" | "/" | "^" | "=" | "±" | "plusminus";
     right: ASTNode;
     left: ASTNode;
 }

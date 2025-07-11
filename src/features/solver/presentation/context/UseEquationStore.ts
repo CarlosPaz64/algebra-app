@@ -15,6 +15,7 @@ interface EquationState {
     saveEquation: (eq: Equation) => Promise<void>;
     deleteEquation: (id: string) => Promise<void>;
     clearAll: () => Promise<void>;
+    getEquationById: (id: string) => Promise<Equation | undefined>;
 }
 
 export const useEquationStore = create<EquationState>((set) => ({
@@ -48,6 +49,7 @@ export const useEquationStore = create<EquationState>((set) => ({
 
     getEquationById: async (id: string) => {
         const usecase = new GetEquationById(repository);
-        return await usecase.execute(id);
+        const result = await usecase.execute(id);
+        return result ?? undefined; // <-- aquí
     }
 }));
